@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title></title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-blue: #004aad;
+            --text-dark: #333;
+            --white: #ffffff;
+            --bg-image: url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070&auto=format&fit=crop');
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+        body {
+            background: linear-gradient(rgba(255,255,255,0.1), rgba(255,255,255,0.1)), var(--bg-image);
+            background-size: cover; background-position: center; background-attachment: fixed;
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+        }
+
+        header { display: flex; justify-content: space-between; align-items: center; padding: 40px 80px; width: 100%; }
+        .nav-left { font-weight: 600; font-size: 1.2rem; color: var(--text-dark); flex: 1; }
+        .nav-center { flex: 1; display: flex; justify-content: center; }
+        .logo-icon { font-size: 2.5rem; font-weight: 900; color: var(--primary-blue); display: flex; align-items: center; }
+        .nav-right { flex: 1; display: flex; justify-content: flex-end; align-items: center; gap: 25px; color: var(--text-dark); }
+
+        .login-wrapper { flex: 1; display: flex; justify-content: center; align-items: center; padding-bottom: 15vh; }
+        .login-card { width: 100%; max-width: 380px; text-align: center; }
+
+        .input-container { position: relative; margin-bottom: 18px; transition: transform 0.3s; }
+        .input-container i { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); color: #777; font-size: 1.2rem; }
+        .input-container input {
+            width: 100%; padding: 18px 25px 18px 60px; border-radius: 50px; border: 1px solid rgba(255,255,255,0.8);
+            background: rgba(255, 255, 255, 0.95); font-size: 1rem; outline: none; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        .btn-submit {
+            width: 100%; padding: 18px; border-radius: 50px; border: none; background-color: var(--primary-blue);
+            color: white; font-size: 1rem; font-weight: 600; cursor: pointer; transition: 0.2s;
+            box-shadow: 0 5px 15px rgba(0, 74, 173, 0.3); margin-top: 10px;
+        }
+        .btn-submit:disabled { background-color: #ccc; cursor: not-allowed; }
+
+        .login-footer { display: flex; justify-content: space-between; margin-top: 20px; padding: 0 10px; }
+        .login-footer a, .rfid-sync-link { color: var(--text-dark); text-decoration: none; font-size: 0.85rem; font-weight: 500; cursor: pointer; }
+        .login-footer a:hover, .rfid-sync-link:hover { text-decoration: underline; }
+
+        /* RFID Status Indicator */
+        .rfid-status { font-size: 0.7rem; margin-top: 15px; color: #555; display: flex; align-items: center; justify-content: center; gap: 5px; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; }
+        .status-active { background: #10b981; box-shadow: 0 0 8px #10b981; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="nav-left"></div>
+        <div class="nav-center"><div class="logo-icon"><i class="fa-solid fa-mountain-sun"></i></div></div>
+        <div class="nav-right"><span>Reallygreatsite</span><i class="fa-solid fa-bars"></i></div>
+    </header>
+
+    <div class="login-wrapper">
+        <div class="login-card">
+            <form id="payrollLoginForm" method="POST" action="{% url 'login' %}">
+                {% csrf_token %}
+
+                <!-- Hidden field to hold the RFID UID -->
+                <input type="hidden" id="rfid_uid" name="rfid_uid">
+
+                <div class="input-container">
+                    <i class="fa-regular fa-circle-user"></i>
+                    <input type="text" id="user" name="username" placeholder="Username or Scan Card" required>
+                </div>
+
+                <div class="input-container" id="passContainer">
+                    <i class="fa-regular fa-lock"></i>
+                    <input type="password" id="pass" name="password" placeholder="Password">
+                </div>
+
+                <button type="submit" class="btn-submit" id="submitBtn">Get Started</button>
+
+                <div class="login-footer">
+                    <a id="syncBtn" class="rfid-sync-link" onclick="syncRFID()">
+                        <i class="fa-solid fa-rss"></i> 
+                    </a>
+                    <a href="#">Need Help?</a>
+                </div>
+
+                <div class="rfid-status">
+                    <div id="statusDot" class="status-dot"></div>
+                    <span id="statusText"></span>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+
+        let port = null;
+        let reader = null;
+        let keepReading = false;
+        const STORAGE_KEY = 'rfidScannerActive';
+
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const wasActive = localStorage.getItem(STORAGE_KEY) === 'true';
+            if (wasActive && 'serial' in navigator) {
+                const ports = await navigator.serial.getPorts();
+                if (ports.length > 0) attemptReconnect(ports[0]);
+            }
+        });
+
+        async function attemptReconnect(targetPort) {
+            try { await startSerial(targetPort); } catch (err) { console.warn('[RFID] Auto-connect failed'); }
+        }
+
+        async function startSerial(targetPort) {
+            port = targetPort;
+            await port.open({ baudRate: 9600 });
+            keepReading = true;
+            localStorage.setItem(STORAGE_KEY, 'true');
+            updateUI(true);
+
+            const decoder = new TextDecoderStream();
+            port.readable.pipeTo(decoder.writable);
+            reader = decoder.readable.getReader();
+
+            let buffer = '';
+            try {
+                while (keepReading) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    if (value) {
+                        buffer += value;
+                        if (buffer.includes('\n')) {
+                            const lines = buffer.split('\n');
+                            for (let i = 0; i < lines.length - 1; i++) {
+                                handleUID(lines[i].trim());
+                            }
+                            buffer = lines[lines.length - 1];
+                        }
+                    }
+                }
+            } finally {
+                reader.releaseLock();
+                updateUI(false);
+            }
+        }
+
+        // 2. Handle the Tap
+        function handleUID(uid) {
+            console.log('[RFID] Card Detected:', uid);
+            
+            const rfidHidden = document.getElementById('rfid_uid');
+            const usernameField = document.getElementById('user');
+            const loginForm = document.getElementById('payrollLoginForm');
+            const submitBtn = document.getElementById('submitBtn');
+
+            // Set the UID
+            rfidHidden.value = uid;
+            usernameField.value = uid; // We fill the username with UID for the backend lookup
+            
+            // Visual feedback
+            usernameField.style.background = '#d1fae5';
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Authenticating Card...';
+            
+            // Auto-submit the form
+            setTimeout(() => { loginForm.submit(); }, 500);
+        }
+        
+        async function syncRFID() {
+            if (keepReading) {
+                keepReading = false;
+                if (reader) await reader.cancel();
+                if (port) await port.close();
+                localStorage.setItem(STORAGE_KEY, 'false');
+                updateUI(false);
+                return;
+            }
+            try {
+                const selected = await navigator.serial.requestPort();
+                await startSerial(selected);
+            } catch (err) { console.log('Port selection failed'); }
+        }
+
+        function updateUI(active) {
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+            const syncBtn = document.getElementById('syncBtn');
+
+            if (active) {
+                dot.classList.add('status-active');
+                text.innerText = 'RFID Ready';
+                syncBtn.innerHTML = '<i class="fa-solid fa-stop"></i> Stop RFID';
+            } else {
+                dot.classList.remove('status-active');
+                text.innerText = 'RFID Offline';
+                syncBtn.innerHTML = '<i class="fa-solid fa-rss"></i> Sync RFID';
+            }
+        }
+
+        // Standard Form cleanup
+        window.addEventListener('beforeunload', () => {
+            keepReading = false;
+        });
+    </script>
+</body>
+</html>

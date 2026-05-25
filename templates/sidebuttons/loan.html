@@ -1,0 +1,362 @@
+{% extends 'base_hr.html' %}
+
+{% block title %}Loan Management | PAYER HR{% endblock %}
+
+{% block extra_css %}
+<style>
+.loan-container { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 30px; margin-top: 20px; align-items: start; }
+
+/* Left Side: Entry Form */
+.form-card { background: white; border-radius: 24px; border: 1px solid var(--border); overflow: hidden; }
+.card-header { padding: 25px 35px; border-bottom: 1px solid var(--border); background: #fafbfc; }
+.card-header h2 { font-size: 1.2rem; color: var(--text-main); }
+
+.form-body { padding: 35px; }
+.input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.full-width { grid-column: span 2; }
+
+.form-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+.form-group label { font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+.form-group input, .form-group select {
+    padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border); background: #fdfdfd; outline: none;
+}
+.form-group input:focus { border-color: var(--primary-blue); box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1); }
+
+/* Right Side: Profile Preview */
+.profile-card { background: var(--primary-blue); color: white; border-radius: 24px; padding: 35px; position: sticky; top: 20px; }
+.profile-card h4 { opacity: 0.8; font-size: 0.8rem; text-transform: uppercase; margin-bottom: 20px; }
+.emp-info { display: flex; align-items: center; gap: 15px; margin-bottom: 25px; }
+.emp-avatar { width: 60px; height: 60px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+
+.data-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 0.9rem; }
+.data-row span:last-child { font-weight: 600; }
+.hidden { display: none; }
+
+.btn-submit { width: 100%; background: var(--primary-blue); color: white; border: none; padding: 15px; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+.btn-submit:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(37, 99, 235, 0.3); }
+
+.tag-loan { padding: 4px 10px; border-radius: 8px; font-size: 0.7rem; background: rgba(255,255,255,0.2); }
+/* Modal background */
+.modal {
+  display: none; /* Hidden by default */
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0,0,0,0.5); /* semi-transparent black */
+}
+
+/* Modal content box */
+.modal-content {
+  background-color: #f44336; /* red for error */
+  margin: 15% auto;
+  padding: 20px;
+  border-radius: 8px;
+  width: 300px;
+  color: white;
+  text-align: center;
+  font-family: Arial, sans-serif;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+    
+/* Close button */
+.close {
+  color: white;
+  float: right;
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.close:hover {
+  color: #ddd;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="payroll-header">
+    <div>
+        <h1>Loan Assignment</h1>
+        <p style="color: var(--text-muted); font-size: 0.85rem;">Assign statutory or company loans to employees.</p>
+    </div>
+</div>
+
+<div class="loan-container">
+    <!-- Entry Form -->
+    <div class="form-card">
+        <div class="card-header">
+            <h2>New Loan Application</h2>
+        </div>
+        <form action="{% url 'INPUT-LOAN' %}" method="POST" class="form-body">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label>Select Employee</label>
+                <select name="employee_id" id="employeeSelect" required onchange="updateProfilePreview()">
+                    <option value="" disabled selected>Choose an employee...</option>
+                    {% for employee in employees %}
+                    <option value="{{ employee.id }}" data-salary="{{ employee.basic_pay }}" data-dept="{{ employee.department }}" data-job="{{ employee.job_title }}">
+                        {{ employee.first_name }} {{ employee.last_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="input-grid">
+                <div class="form-group">
+                    <label>Loan Agency</label>
+                    <select id="agency" name="loan_agency" required>
+                        <option value="" disabled selected>Choose an agency</option>
+                        <option value="SSS">SSS</option>
+                        <option value="PAGIBIG">Pag-IBIG</option>
+                        <option value="COOP">Company/COOP</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Loan Type</label>
+                    <select name="loanType" id="loantype">
+                        <option value="" disabled selected>Select loan type...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Amount</label>
+                    <input type="number" step="0.01" name="total_amount" id="totalAmount" placeholder="0.00" >
+                </div>
+
+                <div class="form-group">
+                    <label>Payment Terms (Months)</label>
+                    <select name="terms" id="loanTerms" >
+                        <option value="3">3 Months</option>
+                        <option value="6">6 Months</option>
+                        <option value="12" selected>12 Months</option>
+                        <option value="24">24 Months</option>
+                        <option value="36">36 Months</option>
+                    </select>
+                </div>
+
+                <div class="form-group full-width">
+                    <label>Monthly Amortization</label>
+                    <input name="monthly" type="text" id="monthlyPay" style="background: #f1f5f9; font-weight: 700; color: var(--primary-blue);" placeholder="0.00" oninput="calculateTakehome()" >
+                </div>
+            </div>
+
+            <button type="submit" class="btn-submit">Input Loan</button>
+        </form>
+    </div>
+    
+    <!-- Live Profile Preview -->
+    <div class="profile-card" id="profileCard">
+        <h4>Employee Snapshot</h4>
+        <div class="emp-info">
+            <div class="emp-avatar"><i class="fa-solid fa-user"></i></div>
+            <div>
+                <h2 id="prevName" style="font-size: 1.2rem;">No Selection</h2>
+                <p id="prevJob" style="opacity: 0.7; font-size: 0.8rem;">Select an employee to see details</p>
+            </div>
+        </div>
+
+        <div class="data-row">
+            <span>Department</span>
+            <span id="prevDept">--</span>
+        </div>
+
+        <div id="balanceRow" class="data-row hidden">
+            <span>Remaining Balance</span>
+            <span id="remainingBalance">₱ 0.00</span>
+        </div>
+        <div id="monthlyRow" class="data-row hidden">
+            <span>Monthly Deductions</span>
+            <span id="monthlyDeductions">₱ 0.00</span>
+        </div>
+        <h4 id="active" style="margin-top: 30px;">Active Loans</h4>
+        <div id="activeLoans">
+            <p style="font-size: 0.8rem; opacity: 0.6;">None found</p>
+        </div>
+    </div>
+</div>
+
+<div id="errorModal" class="modal">
+  <div class="modal-content">
+    <span id="closeModal" class="close">&times;</span>
+    <p id="errorMessage">An error occurred!</p>
+  </div>
+</div>
+
+{% endblock %}
+<!-- Error Modal -->
+
+{% block extra_js %}
+<script>
+// Calculate monthly amortization
+//function calculateAmortization() {
+   // const amount = parseFloat(document.getElementById('totalAmount').value) || 0;
+ //   const months = parseInt(document.getElementById('loanTerms').value) || 1;
+ //   const monthly = amount / months;
+ //   document.getElementById('monthlyPay').value = monthly.toFixed(2);
+//}
+
+// Update active loans preview\
+const loanCache = {};
+
+async function getLoanData(employeeId) {
+    if (!loanCache[employeeId]) {
+        const response = await fetch(`/loans/${employeeId}/`);
+        loanCache[employeeId] = await response.json();
+    }
+    return loanCache[employeeId];
+}
+const errorModal = document.getElementById("errorModal");
+const closeModal = document.getElementById("closeModal");
+
+// Close modal when clicking the 'x'
+closeModal.onclick = function() {
+    errorModal.style.display = "none";
+}
+
+// Close modal when clicking outside the modal content
+window.onclick = function(event) {
+    if (event.target === errorModal) {
+        errorModal.style.display = "none";
+    }
+}
+
+async function calculateTakehome() {
+    const select = document.getElementById('employeeSelect');
+    const employeeId = select.value;
+    if (!employeeId) return;
+
+    // Get Basic Pay from the selected option's data attribute
+    const option = select.options[select.selectedIndex];
+    const basicPay = parseFloat(option.getAttribute('data-salary')) || 0;
+
+    // Get current monthly amortization from the input field
+    const newLoanMonthly = parseFloat(document.getElementById('monthlyPay').value) || 0;
+
+    try {
+        const data = await getLoanData(employeeId);
+        const existingMonthlyLoans = parseFloat(data.total_monthly) || 0;
+
+    
+        const estimatedTakehome = basicPay - existingMonthlyLoans - newLoanMonthly;
+
+        console.log("Estimated Takehome:", estimatedTakehome);
+
+        if (estimatedTakehome < 5000) {
+            const errorModal = document.getElementById("errorModal");
+            const errorMessage = document.getElementById("errorMessage");
+            
+            errorMessage.textContent = `Loan ineligible: remaining salary (₱${estimatedTakehome.toLocaleString()}) will fall below the ₱5,000 minimum!`;
+            errorModal.style.display = "block";
+            
+            
+            document.querySelector('.btn-submit').disabled = true;
+            document.querySelector('.btn-submit').style.opacity = '0.5';
+        } else {
+            
+            document.querySelector('.btn-submit').disabled = false;
+            document.querySelector('.btn-submit').style.opacity = '1';
+        }
+    } catch (err) {
+        console.error("Error calculating takehome:", err);
+    }
+}
+async function updateProfilePreview() {
+    const select = document.getElementById('employeeSelect');
+    if (!select.value) return;
+
+    const option = select.options[select.selectedIndex];
+    const employeeId = select.value;
+
+    // 1. Update Static Info from Data Attributes
+    const name = option.text;
+    const salary = parseFloat(option.getAttribute('data-salary')) || 0;
+    const dept = option.getAttribute('data-dept') || "N/A";
+    const job = option.getAttribute('data-job') || "N/A";
+
+    document.getElementById('prevName').innerText = name;
+    document.getElementById('prevJob').innerText = job;
+    document.getElementById('prevDept').innerText = dept;
+    //document.getElementById('prevSalary').innerText = '₱ ' + salary.toLocaleString(undefined, {minimumFractionDigits: 2});
+
+    // 2. Fetch Active Loans from Django API
+    const activeLoansContainer = document.getElementById('activeLoans');
+    activeLoansContainer.innerHTML = '<p style="font-size: 0.8rem; opacity: 0.6;">Loading...</p>';
+
+    try {
+ 
+        
+        const data = await getLoanData(employeeId);
+        
+        const labels = {
+            SSS_salary: "SSS Salary Loan",
+            SSS_calamity: "SSS Calamity",
+            SSS_MPL: "SSS MPL",
+            SSS_educ: "SSS Educational",
+            PAGIBIG_MPL: "Pag-IBIG MPL",
+            PAGIBIG_housing: "Pag-IBIG Housing",
+            COOP: "COOP Loan"
+        };
+
+        activeLoansContainer.innerHTML = ""; // Clear loader
+        let hasLoans = false;
+
+        // Iterate through keys and match with labels
+        Object.entries(data).forEach(([key, value]) => {
+            // Only show if the key is a loan type and value is > 0
+            if (labels[key] && parseFloat(value) > 0) {
+                hasLoans = true;
+                document.getElementById('balanceRow').classList.remove('hidden');
+                document.getElementById('monthlyRow').classList.remove('hidden');
+                
+                activeLoansContainer.innerHTML += `
+                    <div class="data-row">
+                        <span>${labels[key]}</span>
+                        <span>₱ ${parseFloat(value).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                    </div>
+                `;
+            }
+        });
+
+        if (!hasLoans) {
+            activeLoansContainer.innerHTML = '<p style="font-size: 0.8rem; opacity: 0.6;">No active loans found</p>';
+        }
+
+        document.getElementById('remainingBalance').innerText = '₱ ' + (data.total_loans || 0).toLocaleString(undefined, {minimumFractionDigits: 2});
+        document.getElementById('monthlyDeductions').innerText = '₱ ' + (data.total_monthly || 0).toLocaleString(undefined, {minimumFractionDigits: 2});
+    } catch (err) {
+        console.error(err);
+        activeLoansContainer.innerHTML = '<p style="font-size: 0.8rem; color: #ff9b9b;">Failed to load loan data.</p>';
+    }
+}
+// Loan type dropdown
+const agency = document.getElementById('agency');
+const loantype = document.getElementById('loantype');
+
+agency.addEventListener('change', (event) => {
+    loantype.innerHTML = `<option value="" disabled selected>Select loan type...</option>`;
+    if (event.target.value === 'SSS') {
+        loantype.innerHTML += `
+            <option value="SSS_salary">Salary Loan</option>
+            <option value="SSS_calamity">Calamity Loan</option>
+            <option value="SSS_MPL">MPL (Multi-Purpose Loan)</option>
+            <option value="SSS_educ">Educational Loan</option>`;
+    } else if (event.target.value === 'PAGIBIG') {
+        loantype.innerHTML += `
+            <option value="PAGIBIG_MPL">MPL (Multi-Purpose Loan)</option>
+            <option value="PAGIBIG_housing">Housing Loan</option>`;
+    } else if (event.target.value === 'COOP') {
+        loantype.innerHTML += `<option value="COOP">COOP Loan</option>`;
+    }
+});
+</script>
+{% endblock %}
+
+
+
+
+

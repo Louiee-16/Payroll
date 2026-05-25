@@ -1,0 +1,88 @@
+{% extends 'base_hr.html' %}
+
+{% block title %}Home | PAYER HR{% endblock %}
+
+{% block extra_css %}
+<style>
+    .content-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 25px; }
+    .stats-row { grid-column: 1 / span 2; display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 25px; }
+    .stat-card { background: #fff; padding: 20px; border-radius: 15px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start; }
+    .stat-card h2 { font-size: 1.8rem; margin: 10px 0 5px; }
+    .stat-card p { font-size: 0.85rem; color: var(--text-muted); }
+    .card { background: #fff; border-radius: 20px; border: 1px solid var(--border); padding: 25px; }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .status-summary { display: flex; gap: 20px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 20px; }
+    .status-pill { font-size: 0.85rem; padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; }
+    .status-pill.active { background: #f3f4f6; font-weight: 600; }
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 12px; font-size: 0.8rem; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+    td { padding: 15px 12px; font-size: 0.9rem; border-bottom: 1px solid #f9f9f9; }
+    .user-cell { display: flex; align-items: center; gap: 10px; }
+    .user-cell img { width: 32px; height: 32px; border-radius: 50%; }
+    .badge { padding: 4px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
+    .badge-late { background: #fef2f2; color: #ef4444; }
+    .badge-ontime { background: #ecfdf5; color: #10b981; }
+    .task-item { border-left: 3px solid var(--primary-blue); padding: 10px 15px; background: #f8fafc; margin-bottom: 10px; border-radius: 0 8px 8px 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-grid">
+    <!-- Top 4 Stats -->
+    <div class="stats-row">
+        <div class="stat-card">
+            <div><p>Headcount</p><h2>{{employees|length}}</h2><span style="color: #10b981; font-size: 0.75rem;">+10 last week</span></div>
+            <i class="fa-solid fa-users" style="color: #6366f1;"></i>
+        </div>
+        <div class="stat-card">
+            <div><p>Leavers</p><h2>{{on_leave|length}}</h2><span style="color:#ef4444; font-size: 0.75rem;">+13 last week</span></div>
+            <i class="fa-solid fa-user-minus" style="color: #ef4444;"></i>
+        </div>
+        <div class="stat-card">
+            <div><p>Joiners</p><h2>{{new|length}}</h2><span style="font-size: 0.75rem;">-12 last week</span></div>
+            <i class="fa-solid fa-user-plus" style="color: #10b981;"></i>
+        </div>
+        <div class="stat-card">
+            <div><p>Contractors</p><h2>{{contraactuals|length}}</h2><span style="color: #10b981; font-size: 0.75rem;">+10 last week</span></div>
+            <i class="fa-solid fa-handshake" style="color: #f59e0b;"></i>
+        </div>
+    </div>
+
+    <!-- Attendance Table -->
+    <div class="card">
+        <div class="card-header"><h3>Attendance</h3><a href="#" style="font-size: 0.8rem; color: var(--primary-blue); text-decoration: none;">View all &rarr;</a></div>
+        <div class="status-summary">
+            <div class="status-pill active"><b>92</b> On time</div>
+            <div class="status-pill"><b>12</b> Late</div>
+            <div class="status-pill"><b>4</b> Absent</div>
+        </div>
+        <table>
+            <thead><tr><th>Employee</th><th>Status</th><th>Time Out</th><th>Time In</th></tr></thead>
+            <tbody>
+                {%for employee in employees%}
+                <tr>
+                    <td><!--<div class="user-cell"><img src="https://i.pravatar.cc/100?img=1">--><div><b>{{ employee.first_name }} {{ employee.last_name }}</b></div></td>
+                    <td><span class="badge badge-late">{{employee.status}}</span></td><td>-</td><td>09:45AM</td>
+                </tr>
+                {%endfor%}
+            </tbody>
+        </table>
+    </div>
+
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Specific search logic for the Attendance table
+    document.getElementById('globalSearch').addEventListener('keyup', function() {
+        let filter = this.value.toLowerCase();
+        let rows = document.querySelectorAll('table tbody tr');
+        rows.forEach(row => {
+            let name = row.querySelector('b').innerText.toLowerCase();
+            row.style.display = name.includes(filter) ? "" : "none";
+        });
+    });
+</script>
+{% endblock %}

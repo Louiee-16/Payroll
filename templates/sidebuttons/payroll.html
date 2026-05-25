@@ -1,0 +1,421 @@
+{% extends 'base_hr.html' %}
+{% load humanize %}
+{% block title %}Payroll Engine | PAYER HR{% endblock %}
+
+{% block extra_css %}
+/* Keep your existing CSS - it is already perfect */
+<style>
+    .payroll-wrapper { padding: 32px 36px; }
+
+    /* ── Header ── */
+    .payroll-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:28px; }
+    .payroll-header h1 { font-size:1.35rem; font-weight:700; color:var(--text-main); margin:0 0 4px; }
+    .period-badge {
+        display:inline-flex; align-items:center; gap:6px;
+        font-size:0.75rem; font-weight:500; color:var(--primary-blue);
+        background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.2);
+        padding:3px 10px; border-radius:20px;
+    }
+    .header-actions { display:flex; gap:10px; }
+    .btn-outline {
+        display:inline-flex; align-items:center; gap:7px;
+        padding:9px 18px; border-radius:10px; font-size:0.8rem; font-weight:600;
+        cursor:pointer; border:1.5px solid var(--border); background:white; color:var(--text-main);
+        transition:background .15s, border-color .15s;
+    }
+    .btn-outline:hover { background:#f5f7fa; border-color:#cbd5e1; }
+    .btn-primary {
+        display:inline-flex; align-items:center; gap:7px;
+        padding:9px 18px; border-radius:10px; font-size:0.8rem; font-weight:600;
+        cursor:pointer; border:none; background:var(--primary-blue); color:white;
+        transition:opacity .15s;
+    }
+    .btn-primary:hover { opacity:.88; }
+
+    /* ── Summary Cards ── */
+    .summary-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:24px; }
+    .summary-card { background:white; border:1px solid var(--border); border-radius:14px; padding:20px 22px; }
+    .sc-label { font-size:0.72rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin-bottom:10px; }
+    .sc-value { font-size:1.55rem; font-weight:700; color:var(--text-main); letter-spacing:-0.02em; }
+    .sc-sub   { font-size:0.72rem; color:var(--text-muted); margin-top:5px; }
+    .card-net { background:var(--primary-blue) !important; border-color:transparent !important; }
+    .card-net .sc-label, .card-net .sc-sub { color:rgba(255,255,255,0.65); }
+    .card-net .sc-value { color:white; }
+    .card-deduction .sc-value { color:#ef4444; }
+
+    /* ── Table ── */
+    .table-card { background:white; border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+    .table-card-header { display:flex; justify-content:space-between; align-items:center; padding:16px 22px; border-bottom:1px solid var(--border); }
+    .table-card-header h3 { font-size:0.85rem; font-weight:700; color:var(--text-main); margin:0; }
+    .emp-count-badge { font-size:0.72rem; font-weight:600; color:#6b7280; background:#f3f4f6; padding:3px 10px; border-radius:20px; }
+    table { width:100%; border-collapse:collapse; }
+    thead tr { background:#f9fafb; }
+    th { padding:11px 18px; text-align:left; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#9ca3af; border-bottom:1px solid var(--border); white-space:nowrap; }
+    td { padding:15px 18px; font-size:0.82rem; color:var(--text-main); border-bottom:1px solid #f3f4f6; vertical-align:middle; }
+    tbody tr:last-child td { border-bottom:none; }
+    tbody tr:hover td { background:#fafafa; }
+
+    .emp-cell { display:flex; align-items:center; gap:11px; }
+    .emp-avatar { width:36px; height:36px; border-radius:50%; background:rgba(59,130,246,0.1); color:var(--primary-blue); font-size:0.72rem; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .emp-name { font-weight:700; font-size:0.82rem; }
+    .emp-role { font-size:0.72rem; color:var(--text-muted); margin-top:2px; }
+
+    .chip { display:inline-flex; align-items:center; gap:5px; font-size:0.72rem; font-weight:600; padding:3px 9px; border-radius:20px; }
+    .chip-warning { background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; }
+    .chip-success { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; }
+
+    .text-danger  { color:#ef4444; font-weight:600; }
+    .text-success { color:#10b981; font-weight:600; }
+    .text-bold    { font-weight:700; }
+
+    .btn-view { display:inline-flex; align-items:center; gap:6px; font-size:0.75rem; font-weight:600; padding:7px 14px; border-radius:8px; border:1.5px solid var(--border); background:white; color:var(--text-main); cursor:pointer; transition:background .15s; }
+    .btn-view:hover { background:#f5f7fa; }
+
+    /* ── Modal (normal-flow, no position:fixed) ── */
+    .modal-overlay { display:none; min-height:620px; background:rgba(15,23,42,0.5); align-items:center; justify-content:center; border-radius:16px; margin-top:24px; padding:24px; }
+    .modal-overlay.open { display:flex; }
+    .payslip-modal { background:white; width:100%; max-width:640px; border-radius:18px; overflow:hidden; border:1px solid var(--border); }
+
+    .ps-topbar { background:var(--primary-blue); padding:22px 26px; display:flex; justify-content:space-between; align-items:flex-start; }
+    .ps-topbar h2 { font-size:1.1rem; font-weight:700; color:white; margin:0 0 3px; }
+    .ps-topbar p  { font-size:0.75rem; color:rgba(255,255,255,0.65); margin:0; }
+    .ps-badge { font-size:0.68rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; background:rgba(255,255,255,0.15); color:white; padding:4px 12px; border-radius:20px; border:1px solid rgba(255,255,255,0.25); }
+
+    .ps-body { padding:20px 26px; max-height:70vh; overflow-y:auto; }
+
+    /* Attendance strip */
+    .ps-attendance { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:18px; }
+    .att-box { background:#f9fafb; border:1px solid #f3f4f6; border-radius:10px; padding:10px 12px; text-align:center; }
+    .att-box .att-val { font-size:1.1rem; font-weight:700; color:var(--text-main); }
+    .att-box .att-lbl { font-size:0.68rem; color:#9ca3af; margin-top:2px; }
+
+    .ps-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+    .ps-section-title { font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:#9ca3af; padding-bottom:8px; border-bottom:1px solid #f3f4f6; margin-bottom:12px; }
+    .ps-row { display:flex; justify-content:space-between; font-size:0.8rem; color:#374151; margin-bottom:8px; }
+    .ps-row span:first-child { color:#6b7280; }
+    .ps-row.sub { padding-left:12px; }
+    .ps-row.sub span:first-child { font-size:0.75rem; color:#9ca3af; }
+    .earning-val { color:#10b981; font-weight:600; }
+    .deduct-val  { color:#ef4444; font-weight:600; }
+
+    /* Loans */
+    .ps-loans { background:#fafafa; border:1px solid #f3f4f6; border-radius:10px; padding:14px 16px; margin-top:14px; }
+    .ps-loans-title { font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#9ca3af; margin-bottom:10px; }
+    .loan-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .loan-item { display:flex; flex-direction:column; gap:3px; }
+    .loan-item label { font-size:0.72rem; color:#6b7280; font-weight:500; }
+    .loan-item input { padding:5px 8px; border:1px solid #e5e7eb; border-radius:7px; font-size:0.8rem; background:white; color:var(--text-main); width:100%; }
+
+    /* Employer share note */
+    .employer-note { font-size:0.7rem; color:#9ca3af; background:#f9fafb; border-radius:8px; padding:8px 10px; margin-top:12px; border:1px solid #f3f4f6; }
+    .employer-note strong { color:#6b7280; }
+
+    /* Net pay */
+    .ps-net { display:flex; justify-content:space-between; align-items:center; background:#f0f9ff; border:1px solid #bae6fd; border-radius:12px; padding:16px 20px; margin-top:16px; }
+    .ps-net .net-label  { font-size:0.8rem; font-weight:700; color:#0369a1; }
+    .ps-net .net-sub    { font-size:0.7rem; color:#7dd3fc; margin-top:2px; }
+    .ps-net .net-amount { font-size:1.5rem; font-weight:700; color:#0369a1; letter-spacing:-0.02em; }
+
+    /* Period split */
+    .ps-periods { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px; }
+    .period-box { border:1px solid #e5e7eb; border-radius:10px; padding:12px 14px; }
+    .period-box .p-label { font-size:0.7rem; color:#9ca3af; font-weight:600; text-transform:uppercase; }
+    .period-box .p-date  { font-size:0.72rem; color:#6b7280; margin:2px 0 6px; }
+    .period-box .p-val   { font-size:1rem; font-weight:700; color:var(--primary-blue); }
+
+    .ps-footer { display:flex; gap:10px; padding:16px 26px; border-top:1px solid #f3f4f6; background:#fafafa; }
+    .ps-footer .btn-outline { flex:1; justify-content:center; }
+    .ps-footer .btn-primary { flex:2; justify-content:center; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="payroll-wrapper">
+    <!-- Header -->
+    <div class="payroll-header">
+        <div>
+            <h1>Payroll Processing</h1>
+            <span class="period-badge">
+                <i class="fa-regular fa-calendar"></i>
+                {{ payroll_period_label }} &nbsp;·&nbsp; {{ payroll_period_type }}
+            </span>
+        </div>
+        <div class="header-actions">
+            <button class="btn-outline"><i class="fa-solid fa-file-export"></i> Export CSV</button>
+            <button class="btn-primary"><i class="fa-solid fa-calculator"></i> Run Payroll</button>
+        </div>
+    </div>
+
+    <!-- Summary Cards (Same as yours) -->
+    <div class="summary-grid">
+        <div class="summary-card"><div class="sc-label">Total Gross</div><div class="sc-value">₱{{ total|floatformat:2|intcomma }}</div></div>
+        <div class="summary-card card-deduction"><div class="sc-label">Deductions</div><div class="sc-value">₱{{ total_deductions|floatformat:2|intcomma }}</div></div>
+        <div class="summary-card card-net"><div class="sc-label">Net Pay</div><div class="sc-value">₱{{ total_net|floatformat:2|intcomma }}</div></div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-card">
+        <div class="table-card-header">
+            <h3>Employee Payroll Summary</h3>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Monthly Salary</th>
+                    <th>Period Gross</th>
+                    <th>Days Worked</th>
+                    <th>Attendance</th>
+                    <th>Deductions</th>
+                    <th>Net Pay</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for emp in employees %}
+                <tr>
+                    <td>
+                        <div class="emp-cell">
+                            <div class="emp-avatar">{{ emp.first_name|slice:":1" }}{{ emp.last_name|slice:":1" }}</div>
+                            <div>
+                                <div class="emp-name">{{ emp.first_name }} {{ emp.last_name }}</div>
+                                <div class="emp-role">{{ emp.designation }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>₱{{ emp.basic_pay|floatformat:2|intcomma }}</td>
+                    <td class="text-success">₱{{ emp.period_gross|floatformat:2|intcomma }}</td>
+                    <td>{{ emp.days_worked }} / {{ emp.total_working_days }} days</td>
+                    <td>
+                        {% if emp.late_minutes > 0 %}<span class="chip chip-warning">{{ emp.late_minutes }}m late</span>{% endif %}
+                        {% if emp.absent_days > 0 %}<span class="chip chip-warning">{{ emp.absent_days }}d absent</span>{% endif %}
+                    </td>
+                    <td class="text-danger">₱{{ emp.total_deductions|floatformat:2|intcomma }}</td>
+                    <td class="text-bold">₱{{ emp.net_pay|floatformat:2|intcomma }}</td>
+                    <td>
+                        <!-- FIXED: Added data-attributes for JS to read -->
+                        <button class="btn-view"
+                            onclick="openPayslip(this)"
+                            data-id="{{ emp.id }}"
+                            data-name="{{ emp.first_name }} {{ emp.last_name }}"
+                            data-designation="{{ emp.designation }}"
+                            data-salary="{{ emp.basic_pay }}"
+                            data-totaldays="{{ emp.total_working_days }}"
+                            data-daysworked="{{ emp.days_worked }}"
+                            data-absent="{{ emp.absent_days }}"
+                            data-late="{{ emp.late_minutes }}"
+                            data-leave="{{ emp.leave_days }}">
+                            <i class="fa-solid fa-receipt"></i> View Slip
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Payslip Modal -->
+    <div class="modal-overlay" id="payslipModal">
+        <div class="payslip-modal">
+            <div class="ps-topbar">
+                <div><h2 id="ps-name">—</h2><p id="ps-meta">—</p></div>
+                <span class="ps-badge">Payslip</span>
+            </div>
+            <div class="ps-body">
+                <div class="ps-attendance">
+                    <div class="att-box"><div class="att-val" id="ps-days-worked">—</div><div class="att-lbl">Days Worked</div></div>
+                    <div class="att-box"><div class="att-val" id="ps-absent-days">—</div><div class="att-lbl">Days Absent</div></div>
+                    <div class="att-box"><div class="att-val" id="ps-late-minutes">—</div><div class="att-lbl">Mins Late</div></div>
+                    <div class="att-box"><div class="att-val" id="ps-leave-days">—</div><div class="att-lbl">Leave Days</div></div>
+                </div>
+
+                <div class="ps-grid">
+                    <div>
+                        <div class="ps-section-title">Earnings</div>
+                        <div class="ps-row"><span>Monthly Salary</span><span id="ps-monthly-salary">—</span></div>
+                        <div class="ps-row"><span>Period Gross (½)</span><span class="earning-val" id="ps-period-gross">—</span></div>
+                    </div>
+                    <div>
+                        <div class="ps-section-title">Statutory Deductions</div>
+                        <div class="ps-row"><span>Withholding Tax</span><span class="deduct-val" id="ps-tax">—</span></div>
+                        <div class="ps-row"><span>SSS Personal</span><span class="deduct-val" id="ps-sss-personal">—</span></div>
+                        <div class="ps-row"><span>PhilHealth</span><span class="deduct-val" id="ps-philhealth-personal">—</span></div>
+                        <div class="ps-row"><span>Pag-IBIG</span><span class="deduct-val" id="ps-pagibig">—</span></div>
+                        <div class="ps-row"><span>LWOP (Late/Absent)</span><span class="deduct-val" id="ps-lwop">—</span></div>
+                        
+                        <!-- DYNAMIC LOANS AREA -->
+                        <div class="ps-section-title" style="margin-top:15px">Active Loans</div>
+                        <div id="ps-loan-list">
+                            <!-- Loan items will be injected here -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ps-net">
+                    <div><div class="net-label">Net Pay for this Period</div><div class="net-sub">Gross - All Deductions</div></div>
+                    <div class="net-amount" id="ps-net-pay">—</div>
+                </div>
+            </div>
+            <div class="ps-footer">
+                <button class="btn-outline" onclick="closePayslip()">Close</button>
+                <button class="btn-primary" onclick="window.print()">Print Slip</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let _emp = {}; 
+const loanCache = {};
+
+// Loan API Fetcher (Same as your Loan page)
+async function getLoanData(employeeId) {
+    if (!loanCache[employeeId]) {
+        try {
+            const response = await fetch(`/loans/${employeeId}/monthly_payment`);
+            const data = await response.json()
+            console.log("API Response Data:", data.SSS_salary_monthly);
+            loanCache[employeeId] = data;
+        } catch (e) {
+            console.error("Loan API Error", e);
+            return { total_monthly: 0 };
+        }
+    }
+    return loanCache[employeeId];
+}
+
+function withholdingTax(m) {
+    if (m <= 20833)  return 0;
+    if (m <= 33332)  return (m - 20833) * 0.15;
+    if (m <= 66666)  return 1875 + (m - 33333) * 0.20;
+    return 8541.8 + (m - 66667) * 0.25; // Simplified for example
+}
+
+function fmt(n) {
+    return '₱' + Math.abs(n || 0).toLocaleString('en-PH', { minimumFractionDigits:2 });
+}
+
+function set(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+}
+
+
+async function recalc() {
+   
+    const monthly = parseFloat(_emp.basicPay) || 0;
+    const totalDays = parseInt(_emp.totalWorkingDays) || 22;
+    
+
+    const loanData = await getLoanData(_emp.id);
+    
+    const loanDeduction = parseFloat(loanData.total_monthly) || 0;
+
+   
+    const tax = withholdingTax(monthly) / 2;
+    const sssPersonal = (monthly > 35000) ? 1750 : (monthly * 0.05);
+    const philPersonal = Math.min(monthly * 0.025, 2500);
+    const pagibig = 200; 
+    
+
+    const dailyRate = monthly / totalDays;
+    const lwopAmt = (parseFloat(_emp.absentDays) * dailyRate) + 
+                    (parseFloat(_emp.lateMinutes) / 480 * dailyRate);
+
+  
+    const periodGross = monthly / 2;
+    const totalDeductions = tax + sssPersonal + philPersonal + pagibig + lwopAmt + loanDeduction;
+    const netPay = periodGross - totalDeductions;
+
+  
+    set('ps-monthly-salary',      fmt(monthly));
+    set('ps-period-gross',        fmt(periodGross));
+    set('ps-tax',                 fmt(tax));
+    set('ps-sss-personal',        fmt(sssPersonal));
+    set('ps-philhealth-personal', fmt(philPersonal));
+    set('ps-pagibig',             fmt(pagibig));
+    set('ps-lwop',                fmt(lwopAmt));
+    set('ps-net-pay',             fmt(netPay));
+
+
+    const loanList = document.getElementById('ps-loan-list');
+    loanList.innerHTML = ''; 
+
+    const monthlyLabels = {
+        SSS_salary_monthly: "SSS Salary Loan",
+        SSS_calamity_monthly: "SSS Calamity",
+        SSS_MPL_monthly: "SSS MPL",
+        SSS_educ_monthly: "SSS Educational",
+        PAGIBIG_MPL_monthly: "Pag-IBIG MPL",
+        PAGIBIG_housing_monthly: "Pag-IBIG Housing",
+        COOP_monthly: "COOP Loan"
+    };
+
+    let loanRowsHtml = "";
+    let hasActiveLoans = false;
+
+    // Loop through the API response
+    Object.entries(loanData).forEach(([key, value]) => {
+        const amount = parseFloat(value) || 0;
+        if (monthlyLabels[key] && amount > 0) {
+            hasActiveLoans = true;
+            
+            loanRowsHtml += `
+                <div class="ps-row sub">
+                    <span>${monthlyLabels[key]}</span>
+                    <span class="deduct-val">${fmt(amount)}</span>
+                </div>
+            `;
+        }
+    });
+
+    
+    if (!hasActiveLoans) {
+        loanList.innerHTML = `<div class="ps-row"><span>No Active Loans</span><span>₱0.00</span></div>`;
+    } else {
+        loanList.innerHTML = loanRowsHtml + `
+            <div class="ps-row" style="border-top: 1px solid #f3f4f6; margin-top: 5px; padding-top: 5px; font-weight: 700;">
+                <span>Total Loan Deductions</span>
+                <span class="deduct-val">${fmt(loanDeduction)}</span>
+            </div>
+        `;
+    }
+} 
+
+async function openPayslip(btn) {
+    const d = btn.dataset;
+
+   
+    _emp = {
+        id: d.id,
+        name: d.name,
+        designation: d.designation,
+        basicPay: d.salary,
+        totalWorkingDays: d.totaldays,
+        daysWorked: d.daysworked,
+        absentDays: d.absent,
+        lateMinutes: d.late,
+        leaveDays: d.leave,
+    };
+
+    // Set static UI
+    set('ps-name', _emp.name);
+    set('ps-meta', `DESIGNATION: ${_emp.designation}`);
+    set('ps-days-worked', `${_emp.daysWorked} / ${_emp.totalWorkingDays}`);
+    set('ps-absent-days', _emp.absentDays);
+    set('ps-late-minutes', _emp.lateMinutes);
+    set('ps-leave-days', _emp.leaveDays);
+
+    // Trigger calculation (includes API fetch)
+    await recalc();
+
+    document.getElementById('payslipModal').classList.add('open');
+}
+
+function closePayslip() {
+    document.getElementById('payslipModal').classList.remove('open');
+}
+</script>
+{% endblock %}

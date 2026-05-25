@@ -1,0 +1,396 @@
+{% extends 'base_hr.html' %}
+
+{% block title %}Add New Employee | PAYER HR{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container { max-width: 1000px; margin: 0 auto; }
+    
+    .registration-card {
+        background: white;
+        border-radius: 24px;
+        border: 1px solid var(--border);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.02);
+        overflow: hidden;
+    }
+
+    .form-header {
+        padding: 30px 40px;
+        border-bottom: 1px solid var(--border);
+        background: #fafbfc;
+    }
+    .form-header h2 { font-size: 1.4rem; font-weight: 700; color: var(--text-main); }
+    .form-header p { font-size: 0.85rem; color: var(--text-muted); margin-top: 5px; }
+
+    .form-body { padding: 40px; }
+    
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px 40px;
+    }
+
+    .form-group { display: flex; flex-direction: column; gap: 8px; }
+    .form-group label { font-size: 0.85rem; font-weight: 600; color: var(--text-main); }
+    
+    .form-group input, .form-group select {
+        padding: 12px 16px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: #fdfdfd;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+        outline: none;
+    }
+
+    .form-group input:focus, .form-group select:focus {
+        border-color: var(--primary-blue);
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+        background: white;
+    }
+
+    .section-title {
+        grid-column: 1 / span 2;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--primary-blue);
+        font-weight: 800;
+        margin-top: 10px;
+        border-bottom: 1px solid #f0f0f0;
+        padding-bottom: 10px;
+    }
+
+    .form-footer {
+        padding: 30px 40px;
+        background: #fafbfc;
+        border-top: 1px solid var(--border);
+        display: flex;
+        justify-content: flex-end;
+        gap: 15px;
+    }
+
+    .btn-cancel {
+        background: white;
+        border: 1px solid var(--border);
+        padding: 12px 25px;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        color: var(--text-muted);
+    }
+
+    .btn-save {
+        background: var(--primary-blue);
+        color: white;
+        border: none;
+        padding: 12px 35px;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+    .btn-save:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    .rfid-box {
+        display: flex; gap: 10px;
+    }
+    .btn-rfid {
+        background: #1e1e1e; color: white; border: none; padding: 0 15px; border-radius: 10px; cursor: pointer; font-size: 0.8rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="registration-card">
+        <div class="form-header">
+            <h2>Employee Registration</h2>
+            <p>Enter the personal and professional details of the new team member.</p>
+        </div>
+
+        <form id="addEmployeeForm" action="{% url 'ADD-EMPLOYEE' %}" method="POST">
+            {% csrf_token %}
+            <div class="form-body">
+                <div class="form-grid">
+                    
+                    <div class="section-title">Personal Information</div>
+
+                    <div class="form-group">
+                        <label>First Name</label>
+                        <input type="text" name="first_name" placeholder="e.g. Meera" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Last Name</label>
+                        <input type="text" name="last_name" placeholder="e.g. Sharma" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Email Address</label>
+                        <input type="email" name="email_address" placeholder="meera@yahoo.com" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Mobile Number</label>
+                        <input type="text" name="mobile_number" placeholder="8585858585" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Address</label>
+                        <input type="text" name="address" placeholder="Abc Society, City" required>
+                    </div>
+
+                    <div class="section-title">Job & Credentials</div>
+
+                    <div class="form-group">
+                        <label>Degree</label>
+                        <select name="degree">
+                            <option value="BS">Bachelor's Degree</option>
+                            <option value="MS">Master's Degree</option>
+                            <option value="PHD">PHD / Doctorate</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Designation</label>
+                        <select name="designation">
+                            <option value="Professor">Professor</option>
+                            <option value="Admin">Administrative Staff</option>
+                            <option value="IT">IT Support</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Branch / Department</label>
+                        <select name="department">
+                            <option value="IT">Information Technology</option>
+                            <option value="HR">Human Resources</option>
+                            <option value="Fin">Finance</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>RFID Tag Assignment</label>
+                        <div class="rfid-box">
+                            <!-- Added readonly so people don't type manually -->
+                            <input type="text" id="rfid_field" name="RFID" placeholder="Scan card..." readonly style="flex: 1; background: #eee;">
+                            <button id="syncBtn" type="button" class="btn-rfid" onclick="syncRFID()">
+                                <i class="fa-solid fa-rss"></i> Sync
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="section-title">Payroll & Financials</div>
+
+                    <div class="form-group">
+                        <label>Bank Account Number</label>
+                        <input type="text" name="bank" placeholder="1212121212121212">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Basic Pay (Monthly Salary)</label>
+                        <input type="number" name="basic_pay" placeholder="₱ 40,000" required>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="form-footer">
+                <button type="button" class="btn-cancel" onclick="window.history.back()">Cancel</button>
+                <button type="submit" class="btn-save">Create Employee Account</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MANDATORY SCRIPT TAGS ADDED BELOW -->
+<script>
+let port        = null;
+let reader      = null;
+let keepReading = false;
+let reconnectTimer = null;
+
+const BAUD_RATE        = 9600;
+const RECONNECT_DELAY  = 2000;   // ms between reconnect attempts
+const MAX_RETRIES      = 10;     // max attempts before giving up
+const STORAGE_KEY      = 'rfidScannerActive';
+
+// ── 1. RELEASE PORT ON PAGE UNLOAD ──────────────────────────────────────────
+// Gracefully stop reading before the browser navigates away.
+// This releases the lock so the next page can grab the port immediately.
+window.addEventListener('beforeunload', async () => {
+    keepReading = false;
+    clearTimeout(reconnectTimer);
+    try {
+        if (reader)           await reader.cancel();
+        if (port?.readable)   await port.readable.cancel();
+        if (port?.opened)     await port.close();
+    } catch (_) { /* ignore — page is unloading */ }
+});
+
+// ── 2. AUTO-RESUME ON PAGE LOAD ─────────────────────────────────────────────
+// If the user had the scanner active before navigation, try to reconnect
+// automatically — no click required.
+document.addEventListener('DOMContentLoaded', async () => {
+    const wasActive = localStorage.getItem(STORAGE_KEY) === 'true';
+    if (!wasActive) return;
+    if (!('serial' in navigator)) return;
+
+    const ports = await navigator.serial.getPorts();
+    if (ports.length === 0) return;
+
+    console.log('[RFID] Previously active — auto-reconnecting...');
+    attemptReconnect(ports[0], MAX_RETRIES);
+});
+
+// ── 3. RECONNECT LOOP ───────────────────────────────────────────────────────
+// Retries opening the port up to `maxRetries` times with a delay between
+// each attempt. This handles the case where the previous page hasn't fully
+// released the port lock yet.
+async function attemptReconnect(targetPort, retriesLeft) {
+    if (retriesLeft <= 0) {
+        console.error('[RFID] Could not reconnect after max retries. Port may be locked by another tab.');
+        updateUI(false);
+        return;
+    }
+
+    try {
+        await startSerial(targetPort);
+        console.log('[RFID] Reconnected successfully.');
+    } catch (err) {
+        const attempt = MAX_RETRIES - retriesLeft + 1;
+        console.warn(`[RFID] Attempt ${attempt} failed — retrying in ${RECONNECT_DELAY}ms...`, err.message);
+        reconnectTimer = setTimeout(() => attemptReconnect(targetPort, retriesLeft - 1), RECONNECT_DELAY);
+    }
+}
+
+// ── 4. START SERIAL ─────────────────────────────────────────────────────────
+async function startSerial(targetPort) {
+    if (port?.opened) return; // already connected
+
+    port = targetPort;
+    await port.open({ baudRate: BAUD_RATE });
+
+    keepReading = true;
+    localStorage.setItem(STORAGE_KEY, 'true');
+    updateUI(true);
+
+    // Set up disconnect listener — auto-reconnect if Arduino is unplugged
+    port.addEventListener('disconnect', onPortDisconnect);
+
+    const decoder  = new TextDecoderStream();
+    port.readable.pipeTo(decoder.writable);
+    reader = decoder.readable.getReader();
+
+    let buffer = '';
+    try {
+        while (keepReading) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            if (value) {
+                buffer += value;
+                // Arduino sends UID followed by newline
+                if (buffer.includes('\n')) {
+                    const lines = buffer.split('\n');
+                    // Process all complete lines
+                    for (let i = 0; i < lines.length - 1; i++) {
+                        const uid = lines[i].trim();
+                        if (uid) handleUID(uid);
+                    }
+                    // Keep any incomplete trailing data in buffer
+                    buffer = lines[lines.length - 1];
+                }
+            }
+        }
+    } catch (err) {
+        if (keepReading) {
+            // Unexpected error — not a manual stop
+            console.error('[RFID] Read error:', err);
+        }
+    } finally {
+        try { reader.releaseLock(); } catch (_) {}
+        updateUI(false);
+    }
+}
+
+// ── 5. HANDLE ARDUINO DISCONNECT (USB UNPLUGGED) ───────────────────────────
+// If the Arduino is physically unplugged, try to reconnect once it's
+// re-plugged by polling for the port to become available again.
+async function onPortDisconnect() {
+    console.warn('[RFID] Arduino disconnected. Waiting for reconnection...');
+    keepReading = false;
+    updateUI(false, 'Reconnecting...');
+
+    if (!('serial' in navigator)) return;
+
+    // Poll until the port reappears (user re-plugs the Arduino)
+    reconnectTimer = setInterval(async () => {
+        const ports = await navigator.serial.getPorts();
+        if (ports.length > 0) {
+            clearInterval(reconnectTimer);
+            console.log('[RFID] Arduino re-detected. Reconnecting...');
+            attemptReconnect(ports[0], MAX_RETRIES);
+        }
+    }, RECONNECT_DELAY);
+}
+
+// ── 6. HANDLE UID ───────────────────────────────────────────────────────────
+function handleUID(uid) {
+    console.log('[RFID] Scanned UID:', uid);
+
+    const rfidInput = document.getElementById('rfid_field');
+    if (rfidInput) {
+        rfidInput.value = uid;
+        rfidInput.style.backgroundColor = '#d1fae5';
+        setTimeout(() => { rfidInput.style.backgroundColor = '#fdfdfd'; }, 500);
+    }
+
+    // Fire a custom event — other parts of your app can listen to this
+    window.dispatchEvent(new CustomEvent('rfidScanned', { detail: uid }));
+}
+
+// ── 7. MANUAL SYNC BUTTON ───────────────────────────────────────────────────
+async function syncRFID() {
+    if (keepReading) {
+        await stopReading();
+        return;
+    }
+    try {
+        const selected = await navigator.serial.requestPort();
+        await startSerial(selected);
+    } catch (err) {
+        console.log('[RFID] Port selection cancelled or failed.');
+    }
+}
+
+async function stopReading() {
+    keepReading = false;
+    clearTimeout(reconnectTimer);
+    clearInterval(reconnectTimer);
+    localStorage.setItem(STORAGE_KEY, 'false');
+
+    try { if (reader)        await reader.cancel();   } catch (_) {}
+    try { if (port?.opened)  await port.close();      } catch (_) {}
+
+    port   = null;
+    reader = null;
+    updateUI(false);
+}
+
+// ── 8. UI ────────────────────────────────────────────────────────────────────
+function updateUI(active, label = null) {
+    const btn = document.getElementById('syncBtn');
+    if (!btn) return;
+    if (active) {
+        btn.innerHTML         = '<i class="fa-solid fa-stop"></i> Stop Sync';
+        btn.style.background  = '#ef4444';
+    } else {
+        btn.innerHTML         = label
+            ? `<i class="fa-solid fa-rotate"></i> ${label}`
+            : '<i class="fa-solid fa-rss"></i> Sync';
+        btn.style.background  = '#1e1e1e';
+    }
+}
+</script>
+{% endblock %}

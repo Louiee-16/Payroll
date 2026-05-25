@@ -1,0 +1,146 @@
+{% extends 'base_hr.html' %}
+{% load humanize %}
+
+{% block title %}My Leave Dashboard | PAYER HR{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-container { padding: 30px; display: grid; grid-template-columns: 1fr 350px; gap: 30px; }
+    
+    /* Stats Row */
+    .balance-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 30px; grid-column: span 2; }
+    .balance-card { background: white; padding: 25px; border-radius: 20px; border: 1px solid var(--border); position: relative; overflow: hidden; }
+    .balance-card h3 { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+    .balance-card .value { font-size: 2rem; font-weight: 800; color: var(--text-main); }
+    .balance-card .sub { font-size: 0.75rem; color: #16a34a; font-weight: 600; margin-top: 5px; }
+    .balance-card::after { content: ''; position: absolute; top: 0; right: 0; width: 5px; height: 100%; background: var(--primary-blue); }
+    .card-sl::after { background: #f59e0b; }
+    .card-spl::after { background: #8b5cf6; }
+
+    /* History Table */
+    .table-card { background: white; border-radius: 20px; border: 1px solid var(--border); overflow: hidden; }
+    .table-header { padding: 20px 25px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #fafbfc; padding: 15px 25px; text-align: left; font-size: 0.7rem; text-transform: uppercase; color: #9ca3af; }
+    td { padding: 20px 25px; border-bottom: 1px solid #f8f9fa; font-size: 0.85rem; }
+
+    /* Status Badges */
+    .badge { padding: 5px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; }
+    .badge-PENDING { background: #fff7ed; color: #c2410c; }
+    .badge-APPROVED { background: #f0fdf4; color: #16a34a; }
+    .badge-REJECTED { background: #fef2f2; color: #dc2626; }
+
+    /* Application Form */
+    .form-card { background: white; border-radius: 20px; border: 1px solid var(--border); padding: 25px; position: sticky; top: 30px; }
+    .form-card h2 { font-size: 1.1rem; margin-bottom: 20px; color: var(--text-main); }
+    .form-group { margin-bottom: 18px; }
+    .form-group label { display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; }
+    .form-group input, .form-group select, .form-group textarea {
+        width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border); background: #fdfdfd; font-size: 0.9rem;
+    }
+    .btn-apply { width: 100%; padding: 14px; background: var(--primary-blue); color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.3s; }
+    .btn-apply:hover { opacity: 0.9; transform: translateY(-2px); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    
+    <!-- Left Column: Balances and History -->
+    <div class="main-content">
+        <div class="payroll-header" style="margin-bottom: 20px;">
+            <h1>Leave Management</h1>
+            <p style="color: var(--text-muted);">Welcome, {{ employee.first_name }}. Track your leave credits and history.</p>
+        </div>
+
+        <!-- Balance Buckets -->
+        <div class="balance-grid">
+            <div class="balance-card">
+                <h3>Vacation Leave (VL)</h3>
+                <div class="value">{{ balance.vl_earned|floatformat:2 }}</div>
+                <div class="sub">Earned: 1.25/mo</div>
+            </div>
+            <div class="balance-card card-sl">
+                <h3>Sick Leave (SL)</h3>
+                <div class="value">{{ balance.sl_earned|floatformat:2 }}</div>
+                <div class="sub">Infinite Accumulation</div>
+            </div>
+            <div class="balance-card card-spl">
+                <h3>Special Privilege (SPL)</h3>
+                <div class="value">{{ balance.spl_balance|floatformat:1 }}</div>
+                <div class="sub">Use-it-or-lose-it</div>
+            </div>
+        </div>
+
+        <!-- History Table -->
+        <div class="table-card">
+            <div class="table-header">
+                <h3 style="font-size: 0.9rem; font-weight: 700;">My Leave History</h3>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Dates</th>
+                        <th>Days</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in history %}
+                    <tr>
+                        <td style="font-weight: 700;">{{ item.leave_type}}</td>
+                        <td>
+                            <div style="font-weight: 600;">{{ item.start_date }}</div>
+                            <div style="font-size: 0.7rem; color: #9ca3af;">to {{ item.end_date }}</div>
+                        </td>
+                        <td>{{ item.duration }} Day{{ item.duration|pluralize }}</td>
+                        <td><span class="badge badge-{{ item.status }}">{{ item.status }}</span></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" style="text-align: center; color: #9ca3af; padding: 40px;">No leave records found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Right Column: Quick Application Form -->
+    <div class="side-form">
+        <div class="form-card">
+            <h2>Apply for Leave</h2>
+            <form action = "{%url 'FILE-LEAVE'%}" method="POST">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>Leave Type</label>
+                    <select name="leave_type" required>
+                        <option value="VL">Vacation Leave</option>
+                        <option value="SL">Sick Leave</option>
+                        <option value="SPL">Special Privilege Leave</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Start Date</label>
+                    <input type="date" name="start_date" min="{{ today }}" required>
+                </div>
+
+                <div class="form-group">
+                    <label>End Date</label>
+                    <input type="date" name="end_date" min="{{ today }}" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Reason for Leave</label>
+                    <textarea name="reason" rows="3" placeholder="Briefly explain..." required></textarea>
+                </div>
+
+                <button type="submit" class="btn-apply">Submit Application</button>
+            </form>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

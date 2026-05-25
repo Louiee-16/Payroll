@@ -1,0 +1,113 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}HR Dashboard | PAYER{% endblock %}</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --sidebar-bg: #1e1e1e;
+            --sidebar-active: #333333;
+            --main-bg: #f9fafb;
+            --card-bg: #ffffff;
+            --text-main: #111827;
+            --text-muted: #6b7280;
+            --primary-blue: #2563eb;
+            --border: #e5e7eb;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        body { display: flex; background-color: var(--main-bg); height: 100vh; overflow: hidden; }
+
+        /* --- SIDEBAR --- */
+        aside { width: 260px; background-color: var(--sidebar-bg); color: #ffffff; display: flex; flex-direction: column; padding: 25px 15px; }
+        .logo { font-size: 1.5rem; font-weight: 800; margin-bottom: 40px; padding-left: 10px; display: flex; align-items: center; gap: 10px; }
+        .logo i { color: var(--primary-blue); transform: rotate(45deg); }
+        .menu-label { font-size: 0.7rem; text-transform: uppercase; color: #555; margin: 20px 10px 10px; font-weight: 700; }
+        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 15px; color: #9ca3af; text-decoration: none; font-size: 0.9rem; border-radius: 10px; transition: 0.2s; margin-bottom: 5px; }
+        .nav-link:hover, .nav-link.active { background-color: var(--sidebar-active); color: #ffffff; }
+
+        /* --- MAIN CONTENT --- */
+        main { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        header { padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; background: var(--main-bg); }
+        .search-container { position: relative; width: 300px; }
+        .search-container input { width: 100%; padding: 10px 15px 10px 40px; border-radius: 8px; border: 1px solid var(--border); outline: none; background: #fff; }
+        .search-container i { position: absolute; left: 15px; top: 12px; color: var(--text-muted); }
+        .top-tools { display: flex; align-items: center; gap: 20px; }
+        .mode-toggle { display: flex; background: #fff; border: 1px solid var(--border); border-radius: 30px; padding: 4px; }
+        .mode-btn { border: none; background: transparent; padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; }
+        .mode-btn.active { background: var(--text-main); color: white; }
+
+        /* Content spacing */
+        .page-wrapper { padding: 0 40px 40px; }
+
+        {% block extra_css %}{% endblock %}
+    </style>
+</head>
+<body>
+
+    <aside>
+        <div class="logo"><i class="fa-solid fa-bolt"></i> PAYER</div>
+        <div class="menu-label">Menu</div>
+        <nav>
+            <!-- LOGIC: Dynamic Active Class based on URL Name -->
+            <a href="{%url 'HR-DASHBOARD'%}" class="nav-link {% if request.resolver_match.url_name == 'hr-home' %}active{% endif %}">
+                <i class="fa-solid fa-house"></i> Home
+            </a>
+            {%if user.role == "STAFF" %}
+            <a href="{%url 'SIDEBUTTON-TEAM'%}" class="nav-link {% if request.resolver_match.url_name == 'hr-team' %}active{% endif %}">
+                <i class="fa-solid fa-users"></i> Team
+            </a>
+            <a href="{%url 'SIDEBUTTON-LOGINS'%}" class="nav-link"><i class="fa-solid fa-briefcase"></i>Logins</a>
+            <a href="{%url 'SIDEBUTTON-PAYROLL'%}" class="nav-link"><i class="fa-solid fa-wallet"></i> Payroll <i class="fa-solid fa-chevron-down" style="font-size: 0.6rem; margin-left: auto;"></i></a>
+            <a href="{%url 'SIDEBUTTON-TIME-TRACKING'%}" class="nav-link"><i class="fa-solid fa-clock"></i> Time Tracking <i class="fa-solid fa-chevron-down" style="font-size: 0.6rem; margin-left: auto;"></i></a>
+            <a href="{%url 'SIDEBUTTON-LEAVE'%}" class="nav-link"><i class="fa-solid fa-clock"></i> Leaves<i class="fa-solid fa-chevron-down" style="font-size: 0.6rem; margin-left: auto;"></i></a>
+
+            <a href="{%url 'SIDEBUTTON-LOAN'%}" class="nav-link"><i class="fa-solid fa-medal"></i> LOAN</a>
+            {%endif%}
+            {%if user.role == "EMPLOYEE" %}
+            <a href="{%url 'EMPLOYEE-LEAVE' %}" class="nav-link"><i class="fa-solid fa-clock"></i> Leaves<i class="fa-solid fa-chevron-down" style="font-size: 0.6rem; margin-left: auto;"></i></a>
+            <a href="{%url 'DTR' %}" class="nav-link"><i class="fa-solid fa-clock"></i> DTR<i class="fa-solid fa-chevron-down" style="font-size: 0.6rem; margin-left: auto;"></i></a>
+
+            {%endif%}
+        </nav>
+        <div class="menu-label">Support</div>
+        <nav>
+            {%if user.role == "STAFF"%}<a href="{%url 'SIDEBUTTON-ADD-EMPLOYEE'%}" class="nav-link"><i class="fa-solid fa-bell"></i> Add Employee</a>{%endif%}
+            <a href="#" class="nav-link"><i class="fa-solid fa-gear"></i> Settings</a>
+            <form action ="{%url 'logout'%}" method="post">
+                {% csrf_token %}
+            <button type="submit" class="nav-link" style="color:#ef4444; margin-top:20px;"><i class="fa-solid fa-power-off"></i> Logout</button>
+            </form>
+        </nav>
+    </aside>
+
+    <main>
+        <header>
+            <div class="search-container">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="globalSearch" placeholder="Search anything...">
+            </div>
+            <div class="top-tools">
+                <div class="mode-toggle">
+                    <button class="mode-btn active"><i class="fa-regular fa-sun"></i> Light</button>
+                    <button class="mode-btn"><i class="fa-regular fa-moon"></i> Dark</button>
+                </div>
+                <i class="fa-regular fa-bell" style="font-size: 1.2rem;"></i>
+                <img src="https://i.pravatar.cc/100?img=12" style="width: 35px; border-radius: 50%;">
+            </div>
+        </header>
+
+        <div class="page-wrapper">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

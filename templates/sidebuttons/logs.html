@@ -1,0 +1,610 @@
+{% extends 'base_hr.html' %}
+{% load humanize %}
+{% block title %}RFID Time Log | PAYER HR{% endblock %}
+
+{% block extra_css %}
+<style>
+    .timelog-wrapper { padding: 32px 36px; }
+
+    /* ── Header ── */
+    .timelog-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:28px; }
+    .timelog-header h1 { font-size:1.35rem; font-weight:700; color:var(--text-main); margin:0 0 4px; }
+    .period-badge {
+        display:inline-flex; align-items:center; gap:6px;
+        font-size:0.75rem; font-weight:500; color:var(--primary-blue);
+        background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.2);
+        padding:3px 10px; border-radius:20px;
+    }
+    .header-actions { display:flex; gap:10px; }
+    .btn-outline {
+        display:inline-flex; align-items:center; gap:7px;
+        padding:9px 18px; border-radius:10px; font-size:0.8rem; font-weight:600;
+        cursor:pointer; border:1.5px solid var(--border); background:white; color:var(--text-main);
+        transition:background .15s, border-color .15s;
+    }
+    .btn-outline:hover { background:#f5f7fa; border-color:#cbd5e1; }
+    .btn-primary {
+        display:inline-flex; align-items:center; gap:7px;
+        padding:9px 18px; border-radius:10px; font-size:0.8rem; font-weight:600;
+        cursor:pointer; border:none; background:var(--primary-blue); color:white;
+        transition:opacity .15s;
+    }
+    .btn-primary:hover { opacity:.88; }
+
+    /* ── Summary Cards ── */
+    .summary-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px; }
+    .summary-card { background:white; border:1px solid var(--border); border-radius:14px; padding:20px 22px; }
+    .sc-label { font-size:0.72rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin-bottom:10px; }
+    .sc-value { font-size:1.55rem; font-weight:700; color:var(--text-main); letter-spacing:-0.02em; }
+    .sc-sub   { font-size:0.72rem; color:var(--text-muted); margin-top:5px; }
+    .card-present .sc-value { color:#10b981; }
+    .card-absent  .sc-value { color:#ef4444; }
+    .card-late    .sc-value { color:#f59e0b; }
+
+    /* ── Scanner Card ── */
+    .scanner-card {
+        background:white; border:1px solid var(--border); border-radius:14px;
+        padding:22px 24px; margin-bottom:24px;
+        display:flex; align-items:center; gap:20px;
+    }
+    .scanner-icon-wrap {
+        width:52px; height:52px; border-radius:14px; flex-shrink:0;
+        background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.15);
+        display:flex; align-items:center; justify-content:center;
+        font-size:1.3rem; color:var(--primary-blue);
+        transition:background .3s;
+    }
+    .scanner-icon-wrap.active {
+        background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.25);
+        color:#10b981;
+    }
+    .scanner-info { flex:1; }
+    .scanner-info h3 { font-size:0.9rem; font-weight:700; color:var(--text-main); margin:0 0 3px; }
+    .scanner-info p  { font-size:0.75rem; color:var(--text-muted); margin:0; }
+    .scanner-status {
+        display:inline-flex; align-items:center; gap:6px;
+        font-size:0.72rem; font-weight:600; padding:3px 10px; border-radius:20px;
+        background:#f3f4f6; color:#6b7280; border:1px solid #e5e7eb;
+        margin-top:6px;
+    }
+    .scanner-status.online { background:#f0fdf4; color:#16a34a; border-color:#bbf7d0; }
+    .scanner-status .dot {
+        width:6px; height:6px; border-radius:50%; background:currentColor;
+    }
+    /* Pulse animation when scanner is active */
+    @keyframes pulse-ring {
+        0%   { box-shadow: 0 0 0 0 rgba(16,185,129,0.4); }
+        70%  { box-shadow: 0 0 0 8px rgba(16,185,129,0); }
+        100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+    }
+    .scanner-icon-wrap.active { animation: pulse-ring 1.5s infinite; }
+
+    /* RFID field + last scanned */
+    .scanner-right { display:flex; flex-direction:column; align-items:flex-end; gap:8px; }
+    .rfid-input-wrap { display:flex; align-items:center; gap:8px; }
+    .rfid-input-wrap label { font-size:0.75rem; color:var(--text-muted); white-space:nowrap; }
+    #rfid_field {
+        width:160px; padding:7px 10px; border:1.5px solid var(--border);
+        border-radius:9px; font-size:0.8rem; font-weight:600;
+        color:var(--text-main); background:#fdfdfd;
+        transition:border-color .2s, background .2s;
+        letter-spacing:.05em;
+    }
+    #rfid_field:focus { outline:none; border-color:var(--primary-blue); }
+    .last-scan { font-size:0.72rem; color:var(--text-muted); text-align:right; }
+    .last-scan span { font-weight:600; color:var(--text-main); }
+
+    /* ── Flash toast ── */
+    #scan-toast {
+        position:fixed; top:24px; right:24px; z-index:9999;
+        background:white; border:1px solid var(--border); border-radius:14px;
+        padding:14px 18px; display:flex; align-items:center; gap:12px;
+        box-shadow:0 8px 24px rgba(0,0,0,0.08);
+        transform:translateY(-10px); opacity:0;
+        transition:transform .25s ease, opacity .25s ease;
+        pointer-events:none; min-width:260px;
+    }
+    #scan-toast.show { transform:translateY(0); opacity:1; }
+    .toast-avatar {
+        width:40px; height:40px; border-radius:50%; flex-shrink:0;
+        background:rgba(59,130,246,0.1); color:var(--primary-blue);
+        font-size:0.8rem; font-weight:700;
+        display:flex; align-items:center; justify-content:center;
+    }
+    .toast-avatar.time-out { background:rgba(239,68,68,0.1); color:#ef4444; }
+    .toast-name  { font-size:0.85rem; font-weight:700; color:var(--text-main); }
+    .toast-sub   { font-size:0.72rem; color:var(--text-muted); margin-top:2px; }
+    .toast-badge {
+        margin-left:auto; font-size:0.68rem; font-weight:700;
+        padding:3px 9px; border-radius:20px; white-space:nowrap;
+    }
+    .toast-badge.in  { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; }
+    .toast-badge.out { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; }
+    .toast-badge.unknown { background:#f3f4f6; color:#6b7280; border:1px solid #e5e7eb; }
+
+    /* ── Table Card ── */
+    .table-card { background:white; border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+    .table-card-header {
+        display:flex; justify-content:space-between; align-items:center;
+        padding:16px 22px; border-bottom:1px solid var(--border);
+    }
+    .table-card-header h3 { font-size:0.85rem; font-weight:700; color:var(--text-main); margin:0; }
+    .table-actions { display:flex; gap:8px; align-items:center; }
+    .search-input {
+        padding:7px 12px; border:1.5px solid var(--border); border-radius:9px;
+        font-size:0.78rem; color:var(--text-main); background:#fdfdfd;
+        width:200px; transition:border-color .2s;
+    }
+    .search-input:focus { outline:none; border-color:var(--primary-blue); }
+
+    table { width:100%; border-collapse:collapse; }
+    thead tr { background:#f9fafb; }
+    th {
+        padding:11px 18px; text-align:left; font-size:0.7rem; font-weight:700;
+        text-transform:uppercase; letter-spacing:.06em; color:#9ca3af;
+        border-bottom:1px solid var(--border); white-space:nowrap;
+    }
+    td {
+        padding:14px 18px; font-size:0.82rem; color:var(--text-main);
+        border-bottom:1px solid #f3f4f6; vertical-align:middle;
+    }
+    tbody tr:last-child td { border-bottom:none; }
+    tbody tr:hover td { background:#fafafa; }
+    /* Highlight newly scanned row */
+    tbody tr.just-scanned td { background:#f0fdf4; transition:background 1.5s ease; }
+
+    .emp-cell { display:flex; align-items:center; gap:11px; }
+    .emp-avatar {
+        width:36px; height:36px; border-radius:50%;
+        background:rgba(59,130,246,0.1); color:var(--primary-blue);
+        font-size:0.72rem; font-weight:700;
+        display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    }
+    .emp-name { font-weight:700; font-size:0.82rem; }
+    .emp-role { font-size:0.72rem; color:var(--text-muted); margin-top:2px; }
+    .emp-rfid { font-size:0.7rem; color:#9ca3af; font-family:monospace; margin-top:1px; }
+
+    .chip { display:inline-flex; align-items:center; gap:5px; font-size:0.72rem; font-weight:600; padding:3px 9px; border-radius:20px; }
+    .chip-in      { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; }
+    .chip-out     { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; }
+    .chip-absent  { background:#f3f4f6; color:#6b7280; border:1px solid #e5e7eb; }
+    .chip-late    { background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; }
+
+    .time-val { font-size:0.82rem; font-weight:600; color:var(--text-main); font-family:monospace; }
+    .time-dash { color:#d1d5db; }
+
+    .duration-val { font-size:0.78rem; color:#6b7280; }
+    .late-tag { font-size:0.68rem; color:#f59e0b; font-weight:600; margin-top:2px; }
+
+    .text-muted { color:#9ca3af; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="timelog-wrapper">
+
+    <!-- Header -->
+    <div class="timelog-header">
+        <div>
+            <h1>RFID Time Log</h1>
+            <span class="period-badge">
+                <i class="fa-regular fa-calendar"></i>
+                {{ today|date:"F j, Y" }} &nbsp;·&nbsp; {{ today|date:"l" }}
+            </span>
+        </div>
+        <div class="header-actions">
+            <button class="btn-outline"><i class="fa-solid fa-file-export"></i> Export CSV</button>
+            <button class="btn-outline" onclick="location.reload()"><i class="fa-solid fa-rotate"></i> Refresh</button>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="summary-grid">
+        <div class="summary-card">
+            <div class="sc-label">Total Employees</div>
+            <div class="sc-value">{{ total_employees }}</div>
+            <div class="sc-sub">Registered in system</div>
+        </div>
+        <div class="summary-card card-present">
+            <div class="sc-label">Present Today</div>
+            <div class="sc-value">{{ present_count }}</div>
+            <div class="sc-sub">Clocked in</div>
+        </div>
+        <div class="summary-card card-absent">
+            <div class="sc-label">Absent</div>
+            <div class="sc-value">{{ absent_count }}</div>
+            <div class="sc-sub">No time-in recorded</div>
+        </div>
+        <div class="summary-card card-late">
+            <div class="sc-label">Late</div>
+            <div class="sc-value">{{ late_count }}</div>
+            <div class="sc-sub">Arrived after {{ cutoff_time }}</div>
+        </div>
+    </div>
+
+    <!-- Scanner Card -->
+    <div class="scanner-card">
+        <div class="scanner-icon-wrap" id="scannerIcon">
+            <i class="fa-solid fa-wifi" id="scannerIconFA"></i>
+        </div>
+        <div class="scanner-info">
+            <h3>RFID Scanner</h3>
+            <p>Tap employee card on the reader to log time-in or time-out.</p>
+            <div class="scanner-status" id="scannerStatus">
+                <span class="dot"></span> Disconnected
+            </div>
+        </div>
+        <div class="scanner-right">
+            <div class="rfid-input-wrap">
+                <label><i class="fa-solid fa-tag"></i> Last UID:</label>
+                <input type="text" id="rfid_field" placeholder="Waiting..." readonly>
+            </div>
+            <div class="last-scan" id="lastScanInfo">No scan yet</div>
+            <button class="btn-primary" id="syncBtn" onclick="syncRFID()">
+                <i class="fa-solid fa-rss"></i> Sync Scanner
+            </button>
+        </div>
+    </div>
+
+    <!-- Time Log Table -->
+    <div class="table-card">
+        <div class="table-card-header">
+            <h3>Today's Attendance Log</h3>
+            <div class="table-actions">
+                <input class="search-input" type="text" placeholder="Search employee..." oninput="filterTable(this.value)">
+                <span style="font-size:0.72rem; color:var(--text-muted);">
+                    {{ logs|length }} record{{ logs|length|pluralize }}
+                </span>
+            </div>
+        </div>
+        <table id="logTable">
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>RFID UID</th>
+                    <th>Status</th>
+                    <th>Time In</th>
+                    <th>Time Out</th>
+                    <th>Hours Worked</th>
+                    <th>Attendance</th>
+                </tr>
+            </thead>
+            <tbody id="logTableBody">
+                {% for log in logs %}
+                <tr data-name="{{ log.employee.first_name|lower }} {{ log.employee.last_name|lower }}"
+                    data-rfid="{{ log.employee.rfid_uid }}">
+                    <td>
+                        <div class="emp-cell">
+                            <div class="emp-avatar">
+                                {{ log.employee.first_name|slice:":1" }}{{ log.employee.last_name|slice:":1" }}
+                            </div>
+                            <div>
+                                <div class="emp-name">{{ log.employee.first_name }} {{ log.employee.last_name }}</div>
+                                <div class="emp-role">{{ log.employee.designation }}</div>
+                                <div class="emp-rfid">{{ log.employee.rfid_uid }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td><code style="font-size:0.78rem; color:#6b7280;">{{ log.employee.rfid_uid }}</code></td>
+                    <td>
+                        {% if log.time_out %}
+                            <span class="chip chip-out"><i class="fa-solid fa-right-from-bracket fa-xs"></i> Timed Out</span>
+                        {% elif log.time_in %}
+                            <span class="chip chip-in"><i class="fa-solid fa-right-to-bracket fa-xs"></i> Timed In</span>
+                        {% else %}
+                            <span class="chip chip-absent"><i class="fa-solid fa-minus fa-xs"></i> Absent</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if log.time_in %}
+                            <span class="time-val">{{ log.time_in|time:"h:i A" }}</span>
+                        {% else %}
+                            <span class="time-dash">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if log.time_out %}
+                            <span class="time-val">{{ log.time_out|time:"h:i A" }}</span>
+                        {% else %}
+                            <span class="time-dash">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if log.hours_worked %}
+                            <span class="duration-val">{{ log.hours_worked }}h</span>
+                        {% else %}
+                            <span class="time-dash">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if log.is_late %}
+                            <span class="chip chip-late"><i class="fa-solid fa-clock fa-xs"></i> Late {{ log.late_minutes }}m</span>
+                        {% elif log.time_in %}
+                            <span class="chip chip-in"><i class="fa-solid fa-check fa-xs"></i> On Time</span>
+                        {% else %}
+                            <span class="chip chip-absent"><i class="fa-solid fa-xmark fa-xs"></i> Absent</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" style="text-align:center; padding:40px; color:var(--text-muted);">
+                        <i class="fa-solid fa-inbox" style="font-size:1.5rem; display:block; margin-bottom:8px;"></i>
+                        No attendance records for today yet.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Hidden CSRF for AJAX POST -->
+    <input type="hidden" id="csrf_token" value="{{ csrf_token }}">
+
+</div>
+
+<!-- Scan Toast -->
+<div id="scan-toast">
+    <div class="toast-avatar" id="toast-avatar">—</div>
+    <div>
+        <div class="toast-name" id="toast-name">—</div>
+        <div class="toast-sub"  id="toast-sub">—</div>
+    </div>
+    <span class="toast-badge" id="toast-badge">—</span>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+{# ── RFID Serial Engine ── #}
+<script>
+let port        = null;
+let reader      = null;
+let keepReading = false;
+let reconnectTimer = null;
+
+const BAUD_RATE       = 9600;
+const RECONNECT_DELAY = 2000;
+const MAX_RETRIES     = 10;
+const STORAGE_KEY     = 'rfidScannerActive';
+
+window.addEventListener('beforeunload', async () => {
+    keepReading = false;
+    clearTimeout(reconnectTimer);
+    try {
+        if (reader)          await reader.cancel();
+        if (port?.readable)  await port.readable.cancel();
+        if (port?.opened)    await port.close();
+    } catch (_) {}
+});
+
+document.addEventListener('DOMContentLoaded', async () => {
+    if (localStorage.getItem(STORAGE_KEY) !== 'true') return;
+    if (!('serial' in navigator)) return;
+    const ports = await navigator.serial.getPorts();
+    if (ports.length > 0) attemptReconnect(ports[0], MAX_RETRIES);
+});
+
+async function attemptReconnect(targetPort, retriesLeft) {
+    if (retriesLeft <= 0) { updateUI(false); return; }
+    try {
+        await startSerial(targetPort);
+    } catch (err) {
+        reconnectTimer = setTimeout(() => attemptReconnect(targetPort, retriesLeft - 1), RECONNECT_DELAY);
+    }
+}
+
+async function startSerial(targetPort) {
+    if (port?.opened) return;
+    port = targetPort;
+    await port.open({ baudRate: BAUD_RATE });
+    keepReading = true;
+    localStorage.setItem(STORAGE_KEY, 'true');
+    updateUI(true);
+    port.addEventListener('disconnect', onPortDisconnect);
+
+    const decoder = new TextDecoderStream();
+    port.readable.pipeTo(decoder.writable);
+    reader = decoder.readable.getReader();
+
+    let buffer = '';
+    try {
+        while (keepReading) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            if (value) {
+                buffer += value;
+                if (buffer.includes('\n')) {
+                    const lines = buffer.split('\n');
+                    for (let i = 0; i < lines.length - 1; i++) {
+                        const uid = lines[i].trim();
+                        if (uid) handleUID(uid);
+                    }
+                    buffer = lines[lines.length - 1];
+                }
+            }
+        }
+    } catch (err) {
+        if (keepReading) console.error('[RFID] Read error:', err);
+    } finally {
+        try { reader.releaseLock(); } catch (_) {}
+        updateUI(false);
+    }
+}
+
+async function onPortDisconnect() {
+    keepReading = false;
+    updateUI(false, 'Reconnecting...');
+    reconnectTimer = setInterval(async () => {
+        const ports = await navigator.serial.getPorts();
+        if (ports.length > 0) {
+            clearInterval(reconnectTimer);
+            attemptReconnect(ports[0], MAX_RETRIES);
+        }
+    }, RECONNECT_DELAY);
+}
+
+async function syncRFID() {
+    if (keepReading) { await stopReading(); return; }
+    try {
+        const selected = await navigator.serial.requestPort();
+        await startSerial(selected);
+    } catch (_) {}
+}
+
+async function stopReading() {
+    keepReading = false;
+    clearTimeout(reconnectTimer); clearInterval(reconnectTimer);
+    localStorage.setItem(STORAGE_KEY, 'false');
+    try { if (reader)       await reader.cancel();  } catch (_) {}
+    try { if (port?.opened) await port.close();     } catch (_) {}
+    port = null; reader = null;
+    updateUI(false);
+}
+
+function updateUI(active, label = null) {
+    const btn  = document.getElementById('syncBtn');
+    const icon = document.getElementById('scannerIcon');
+    const stat = document.getElementById('scannerStatus');
+    if (btn) {
+        btn.innerHTML = active
+            ? '<i class="fa-solid fa-stop"></i> Stop Sync'
+            : `<i class="fa-solid fa-rss"></i> ${label || 'Sync Scanner'}`;
+        btn.style.background = active ? '#ef4444' : '';
+        btn.className = active ? 'btn-outline' : 'btn-primary';
+    }
+    if (icon) icon.classList.toggle('active', active);
+    if (stat) {
+        stat.className = 'scanner-status' + (active ? ' online' : '');
+        stat.innerHTML = `<span class="dot"></span> ${active ? 'Scanner Online' : (label || 'Disconnected')}`;
+    }
+}
+</script>
+
+{# ── RFID Scan Handler — posts to Django view & updates table ── #}
+<script>
+const TIMEIN_URL  = "";
+const TIMEOUT_URL = "";
+const CSRF        = document.getElementById('csrf_token').value;
+
+let toastTimer = null;
+
+async function handleUID(uid) {
+    // Update field
+    const field = document.getElementById('rfid_field');
+    if (field) {
+        field.value = uid;
+        field.style.backgroundColor = '#d1fae5';
+        setTimeout(() => { field.style.backgroundColor = '#fdfdfd'; }, 500);
+    }
+    document.getElementById('lastScanInfo').innerHTML =
+        'Last scan: <span>' + new Date().toLocaleTimeString() + '</span>';
+
+    // POST to Django
+    try {
+        const res  = await fetch(TIMEIN_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+            body: JSON.stringify({ uid })
+        });
+        const data = await res.json();
+
+        showToast(data);
+        if (data.success) updateTableRow(data);
+
+    } catch (err) {
+        console.error('[RFID] POST error:', err);
+    }
+
+    window.dispatchEvent(new CustomEvent('rfidScanned', { detail: uid }));
+}
+
+/* ── Toast ── */
+function showToast(data) {
+    const toast  = document.getElementById('scan-toast');
+    const avatar = document.getElementById('toast-avatar');
+    const name   = document.getElementById('toast-name');
+    const sub    = document.getElementById('toast-sub');
+    const badge  = document.getElementById('toast-badge');
+
+    if (data.success) {
+        const initials = data.first_name[0] + data.last_name[0];
+        avatar.textContent  = initials;
+        avatar.className    = 'toast-avatar' + (data.action === 'timeout' ? ' time-out' : '');
+        name.textContent    = data.first_name + ' ' + data.last_name;
+        sub.textContent     = data.designation + ' · ' + data.time;
+        badge.textContent   = data.action === 'timeout' ? 'Time Out' : 'Time In';
+        badge.className     = 'toast-badge ' + (data.action === 'timeout' ? 'out' : 'in');
+    } else {
+        avatar.textContent  = '?';
+        avatar.className    = 'toast-avatar';
+        name.textContent    = 'Unknown RFID';
+        sub.textContent     = 'UID: ' + (data.uid || '—');
+        badge.textContent   = 'Not Found';
+        badge.className     = 'toast-badge unknown';
+    }
+
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 4000);
+}
+
+/* ── Live table row update (no page reload needed) ── */
+function updateTableRow(data) {
+    const tbody = document.getElementById('logTableBody');
+    // Find existing row by RFID
+    let row = tbody.querySelector(`tr[data-rfid="${data.rfid_uid}"]`);
+
+    if (!row) {
+        // New row — prepend to top
+        row = document.createElement('tr');
+        row.dataset.name = (data.first_name + ' ' + data.last_name).toLowerCase();
+        row.dataset.rfid = data.rfid_uid;
+        tbody.prepend(row);
+    }
+
+    const isLate   = data.is_late;
+    const isOut    = data.action === 'timeout';
+    const initials = data.first_name[0] + data.last_name[0];
+
+    row.innerHTML = `
+        <td>
+            <div class="emp-cell">
+                <div class="emp-avatar">${initials}</div>
+                <div>
+                    <div class="emp-name">${data.first_name} ${data.last_name}</div>
+                    <div class="emp-role">${data.designation}</div>
+                    <div class="emp-rfid">${data.rfid_uid}</div>
+                </div>
+            </div>
+        </td>
+        <td><code style="font-size:.78rem;color:#6b7280">${data.rfid_uid}</code></td>
+        <td>
+            ${isOut
+                ? '<span class="chip chip-out"><i class="fa-solid fa-right-from-bracket fa-xs"></i> Timed Out</span>'
+                : '<span class="chip chip-in"><i class="fa-solid fa-right-to-bracket fa-xs"></i> Timed In</span>'}
+        </td>
+        <td><span class="time-val">${data.time_in || '—'}</span></td>
+        <td><span class="time-val">${data.time_out || '<span class="time-dash">—</span>'}</span></td>
+        <td><span class="duration-val">${data.hours_worked ? data.hours_worked + 'h' : '<span class="time-dash">—</span>'}</span></td>
+        <td>
+            ${isLate
+                ? `<span class="chip chip-late"><i class="fa-solid fa-clock fa-xs"></i> Late ${data.late_minutes}m</span>`
+                : '<span class="chip chip-in"><i class="fa-solid fa-check fa-xs"></i> On Time</span>'}
+        </td>`;
+
+    // Flash highlight
+    row.classList.add('just-scanned');
+    setTimeout(() => row.classList.remove('just-scanned'), 2000);
+}
+
+/* ── Search filter ── */
+function filterTable(query) {
+    const q = query.toLowerCase();
+    document.querySelectorAll('#logTableBody tr[data-name]').forEach(row => {
+        const match = row.dataset.name.includes(q) || row.dataset.rfid.includes(q);
+        row.style.display = match ? '' : 'none';
+    });
+}
+</script>
+{% endblock %}

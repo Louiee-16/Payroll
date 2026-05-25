@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ENTRANCE KIOSK | PAYER HR</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #004aad;
+            --success: #10b981;
+            --error: #ef4444;
+            --bg: #f8fafc;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+        body {
+            background-color: var(--bg);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* ── Clock Section ── */
+        .time-display { text-align: center; margin-bottom: 40px; }
+        #clock { font-size: 8rem; font-weight: 800; color: #1e293b; line-height: 1; }
+        #date { font-size: 1.5rem; color: #64748b; text-transform: uppercase; letter-spacing: 3px; margin-top: 10px; }
+
+        /* ── Scanner Card ── */
+        .kiosk-card {
+            background: white;
+            width: 600px;
+            padding: 60px;
+            border-radius: 40px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            border: 4px solid transparent;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .kiosk-card.waiting { border: 4px dashed #cbd5e1; }
+        .kiosk-card.active { border: 4px solid var(--primary); }
+        .kiosk-card.success { border-color: var(--success); background: #f0fdf4; transform: scale(1.05); }
+        .kiosk-card.error { border-color: var(--error); background: #fef2f2; }
+
+        .status-icon { font-size: 5rem; color: #94a3b8; margin-bottom: 25px; }
+        .active .status-icon { color: var(--primary); animation: pulse 1.5s infinite; }
+        .success .status-icon { color: var(--success); }
+        .error .status-icon { color: var(--error); }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .message-area h2 { font-size: 2.2rem; font-weight: 800; color: #1e293b; margin-bottom: 10px; }
+        .message-area p { font-size: 1.2rem; color: #64748b; font-weight: 600; }
+
+        /* ── Bottom Controls ── */
+        .admin-controls { position: fixed; bottom: 25px; right: 25px; opacity: 0.4; transition: 0.3s; }
+        .login-link-wrapper { position: fixed; bottom: 25px; left: 25px; opacity: 0.8; transition: 0.3s; }
+        
+        .admin-controls:hover, .login-link-wrapper:hover { opacity: 1; }
+
+        .btn-sync, .btn-login {
+            display: flex; align-items: center; gap: 10px;
+            padding: 14px 24px; border-radius: 14px; font-weight: 700; font-size: 0.9rem;
+            cursor: pointer; transition: 0.2s; text-decoration: none;
+        }
+
+        /* Dark pill for Sync */
+        .btn-sync { background: #1e293b; color: white; border: none; }
+        
+        /* Outline pill for Login */
+        .btn-login { background: white; color: var(--primary); border: 2px solid var(--primary); }
+        .btn-login:hover { background: var(--primary); color: white; }
+
+    </style>
+</head>
+<body>
+
+    <div class="time-display">
+        <div id="clock">00:00:00</div>
+        <div id="date">Loading...</div>
+    </div>
+
+    <div class="kiosk-card waiting" id="kioskCard">
+        <div id="ui-waiting">
+            <div class="status-icon"><i class="fa-solid fa-rss"></i></div>
+            <div class="message-area">
+                <h2>TAP YOUR CARD</h2>
+                <p>Please use your RFID ID to log in/out</p>
+            </div>
+        </div>
+
+        <div id="ui-result" style="display: none;">
+            <div class="status-icon" id="resIcon"></div>
+            <div class="message-area">
+                <h2 id="resName">---</h2>
+                <p id="resStatus">---</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Button (Bottom Left) -->
+    <div class="login-link-wrapper">
+        <a href="/login/" class="btn-login">
+            <i class="fa-solid fa-right-to-bracket"></i> Login
+        </a>
+    </div>
+
+    <!-- Sync Controls (Bottom Right) -->
+    <div class="admin-controls">
+        <button class="btn-sync" onclick="syncRFID()">
+            <i class="fa-solid fa-plug"></i> <span id="syncText">Connect Scanner</span>
+        </button>
+    </div>
+
+
+    <script>
+        // 1. Clock Logic
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.toLocaleTimeString('en-PH', { hour12: true });
+            document.getElementById('date').innerText = now.toLocaleDateString('en-PH', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        // 2. RFID Serial Logic
+        let port = null;
+        let reader = null;
+        let keepReading = false;
+
+        async function syncRFID() {
+            try {
+                const selected = await navigator.serial.requestPort();
+                port = selected;
+                await port.open({ baudRate: 9600 });
+                keepReading = true;
+                
+                document.getElementById('kioskCard').className = 'kiosk-card active';
+                document.getElementById('syncText').innerText = "Scanner Ready";
+                
+                readData();
+            } catch (err) { console.error(err); }
+        }
+
+        async function readData() {
+            const decoder = new TextDecoderStream();
+            port.readable.pipeTo(decoder.writable);
+            reader = decoder.readable.getReader();
+            let buffer = '';
+
+            while (keepReading) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                buffer += value;
+                if (buffer.includes('\n')) {
+                    const lines = buffer.split('\n');
+                    handleTap(lines[0].trim());
+                    buffer = lines[lines.length - 1];
+                }
+            }
+        }
+
+        async function handleTap(uid) {
+            console.log("Card Scanned:", uid);
+            
+            try {
+                const response = await fetch('/attendance/process-scan/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                    body: JSON.stringify({ rfid_uid: uid })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    showResult(data.name, data.action, "success");
+                } else {
+                    showResult("Access Denied", data.error || "Unknown Card", "error");
+                }
+            } catch (err) {
+                showResult("System Error", "Check Server Connection", "error");
+            }
+        }
+
+        function showResult(name, status, type) {
+            const card = document.getElementById('kioskCard');
+            const uiWaiting = document.getElementById('ui-waiting');
+            const uiResult = document.getElementById('ui-result');
+            const resIcon = document.getElementById('resIcon');
+
+            uiWaiting.style.display = 'none';
+            uiResult.style.display = 'block';
+            card.className = `kiosk-card ${type}`;
+
+            document.getElementById('resName').innerText = name;
+            document.getElementById('resStatus').innerText = status;
+            document.getElementById('resStatus').style.color = (type === 'success') ? '#10b981' : '#ef4444';
+            resIcon.innerHTML = (type === 'success') ? '<i class="fa-solid fa-circle-check"></i>' : '<i class="fa-solid fa-circle-xmark"></i>';
+
+            // Reset after 3 seconds
+            setTimeout(() => {
+                card.className = 'kiosk-card active';
+                uiWaiting.style.display = 'block';
+                uiResult.style.display = 'none';
+            }, 3000);
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
+</body>
+</html>

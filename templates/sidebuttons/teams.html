@@ -1,0 +1,193 @@
+{% extends 'base_hr.html' %}
+
+{% block title %}Team Management | PAYER HR{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Stats & Header */
+    .team-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 30px; margin-top: 10px; }
+    .team-title h1 { font-size: 1.8rem; font-weight: 700; color: var(--text-main); }
+    .team-title p { color: var(--text-muted); font-size: 0.9rem; }
+
+.btn-add {
+    background: var(--primary-blue);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: fit-content;
+    transition: 0.3s;
+    margin-bottom: 10px;
+    margin-left: auto;
+}    .btn-add:hover { background: #1d4ed8; transform: translateY(-2px); }
+
+    /* Table Card */
+    .card { background: var(--card-bg); border-radius: 20px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
+    .card-tools { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; }
+    
+    .search-wrapper { position: relative; width: 300px; }
+    .search-wrapper input { width: 100%; padding: 10px 15px 10px 40px; border-radius: 10px; border: 1px solid var(--border); outline: none; transition: 0.3s; }
+    .search-wrapper input:focus { border-color: var(--primary-blue); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+    .search-wrapper i { position: absolute; left: 15px; top: 12px; color: var(--text-muted); }
+
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 15px 20px; font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; background: #fdfdfd; }
+    td { padding: 15px 20px; border-top: 1px solid var(--border); vertical-align: middle; }
+
+    .emp-profile { display: flex; align-items: center; gap: 12px; }
+    .emp-profile .avatar { width: 40px; height: 40px; border-radius: 50%; background: #eee; overflow: hidden; }
+    .emp-profile img { width: 100%; height: 100%; object-fit: cover; }
+    .emp-name { font-weight: 600; font-size: 0.9rem; }
+    .emp-email { font-size: 0.75rem; color: var(--text-muted); }
+
+    .rfid-tag { font-family: monospace; background: #f3f4f6; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; color: var(--primary-blue); font-weight: 600; }
+    .status-active { color: #10b981; font-weight: 600; font-size: 0.85rem; }
+
+    .action-icon { color: var(--text-muted); cursor: pointer; margin-left: 15px; transition: 0.2s; }
+    .action-icon:hover { color: var(--primary-blue); }
+
+    /* Modal Styling */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
+    .modal { background: white; width: 500px; border-radius: 20px; padding: 30px; position: relative; animation: slideUp 0.3s ease; }
+    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+    .modal-header { margin-bottom: 25px; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 8px; }
+    .form-group input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border); outline: none; }
+    
+    .rfid-input-wrapper { display: flex; gap: 10px; }
+    .btn-sync { background: #f3f4f6; border: 1px solid var(--border); padding: 0 15px; border-radius: 10px; cursor: pointer; font-size: 0.8rem; font-weight: 600; transition: 0.2s; }
+    .btn-sync:hover { background: #e5e7eb; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="team-header">
+    <div class="team-title">
+        <h1>Employee Directory</h1>
+        <p>Manage your team members and their RFID credentials.</p>
+    </div>
+<a href="{% url 'SIDEBUTTON-ADD-EMPLOYEE' %}" class="btn-add">
+    <i class="fa-solid fa-plus"></i> Add Employee
+</a>
+</div>
+
+<div class="card">
+    <div class="card-tools">
+        <div class="search-wrapper">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="teamSearch" placeholder="Search by name or position...">
+        </div>
+        <div class="filter-group">
+            <button class="btn-sync" style="height: 100%; padding: 10px 20px;"><i class="fa-solid fa-filter"></i> Filter</button>
+        </div>
+    </div>
+
+    <table id="teamTable">
+        <thead>
+            <tr>
+                <th>Employee</th>
+                <th>Position</th>
+                <th>RFID Tag</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {%for employee in employees%}
+            <tr>
+                <td>
+                    <div class="emp-profile">
+                        <!--<div class="avatar"><img src="https://i.pravatar.cc/100?img=1"></div>-->
+                        <div>
+                            <div class="emp-name">{{employee.first_name}} {{employee.last_name}}</div>
+                            <div class="emp-email">{{employee.email_address}}</div>
+                        </div>
+                    </div>
+                </td>
+                <td>{{employee.designation}}</td>
+                <td><span class="rfid-tag">{{employee.RFID}}</span></td>
+                <td><span class="status-active">Active</span></td>
+                <td>
+                    <i class="fa-solid fa-pen-to-square action-icon"></i>
+                    <i class="fa-solid fa-trash action-icon" style="color: #ef4444;"></i>
+                </td>
+            </tr>
+            {%endfor%}
+        </tbody>
+    </table>
+</div>
+
+<!-- ADD EMPLOYEE MODAL -->
+<div class="modal-overlay" id="addModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2>Add New Employee</h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem;">Register a new staff member and assign hardware.</p>
+        </div>
+        <form id="addEmployeeForm">
+            <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" placeholder="e.g. John Doe" required>
+            </div>
+            <div class="form-group">
+                <label>Position</label>
+                <input type="text" placeholder="e.g. Software Engineer" required>
+            </div>
+            <div class="form-group">
+                <label>Monthly Salary (Gross)</label>
+                <input type="number" placeholder="₱ 0.00" required>
+            </div>
+            <div class="form-group">
+                <label>Assign RFID Tag</label>
+                <div class="rfid-input-wrapper">
+                    <input type="text" id="rfidDisplay" placeholder="Waiting for scan..." readonly>
+                    <button type="button" class="btn-sync" onclick="alert('JavaScript will trigger Web Serial API here!')">
+                        <i class="fa-solid fa-rss"></i> Sync
+                    </button>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 30px;">
+                <button type="submit" class="btn-add" style="flex: 2; justify-content: center;">Save Employee</button>
+                <button type="button" class="btn-sync" style="flex: 1;" onclick="toggleModal(false)">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+
+
+    // 1. Search Logic
+    document.getElementById('teamSearch').addEventListener('keyup', function() {
+        let filter = this.value.toUpperCase();
+        let rows = document.querySelector("#teamTable tbody").rows;
+        for (let row of rows) {
+            let name = row.cells[0].textContent.toUpperCase();
+            let pos = row.cells[1].textContent.toUpperCase();
+            row.style.display = (name.includes(filter) || pos.includes(filter)) ? "" : "none";
+        }
+    });
+
+    // 2. Modal Toggle Logic
+    function toggleModal(show) {
+        document.getElementById('addModal').style.display = show ? 'flex' : 'none';
+    }
+
+    // 3. Close modal when clicking outside of it
+    window.onclick = function(event) {
+        let modal = document.getElementById('addModal');
+        if (event.target == modal) {
+            toggleModal(false);
+        }
+    }
+</script>
+{% endblock %}
