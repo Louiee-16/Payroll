@@ -68,6 +68,9 @@ def credit_leave(request):
     return redirect('SIDEBUTTON-LEAVE')
 
 
+from django.views.decorators.http import require_POST
+
+@require_POST
 @staff_required
 def update_leave_status(request, leave_id, status):
     leave = get_object_or_404(LeaveRequest, id=leave_id)

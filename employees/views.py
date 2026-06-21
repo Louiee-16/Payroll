@@ -188,10 +188,11 @@ def DTR(request):
             days_worked += 1
 
             if log.time_in:
-                check_in = log.time_in.time()
-                if check_in > employee.duty_in:
+                from django.utils import timezone as tz
+                local_in = tz.localtime(log.time_in).time()
+                if local_in > employee.duty_in:
                     diff = (
-                        datetime.datetime.combine(today, check_in)
+                        datetime.datetime.combine(today, local_in)
                         - datetime.datetime.combine(today, employee.duty_in)
                     )
                     day_info['late']    = diff.seconds // 60
@@ -208,7 +209,7 @@ def DTR(request):
         'selected_year':  year,
     }
 
-    return render(request, 'employee/employee_dtr.html', context)
+    return render(request, 'employee/employee_DTR.html', context)
 
 
 @employee_required
@@ -278,6 +279,7 @@ def employee_payslip(request):
     context = {
         'employee':     employee,
         'period_str':   period_str,
+        'gross_with_ot': gross_with_ot,
         'salary':       m,
         'tax':          tax,
         'sss':          sss_ee,

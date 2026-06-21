@@ -1,0 +1,63 @@
+{% extends 'base_hr.html' %}
+{% load humanize %}
+
+{% block title %}Payroll: {{ employee.first_name }} {{ employee.last_name }} | PAYER HR{% endblock %}
+
+{% block extra_css %}
+<style>
+    .detail-page { padding: 30px; max-width: 700px; }
+    .detail-back { display: inline-flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); text-decoration: none; margin-bottom: 20px; }
+    .detail-back:hover { color: var(--primary); }
+    .detail-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 24px 28px; }
+    .detail-card h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 20px; color: var(--text-main); }
+    .row { display: flex; justify-content: space-between; padding: 8px 0; font-size: 0.88rem; }
+    .row .label { color: var(--text-muted); }
+    .row .val { font-weight: 600; color: var(--text-main); }
+    .row .val.red { color: #ef4444; }
+    .row .val.green { color: #10b981; }
+    .section { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin: 18px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .net-box { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 12px; padding: 16px 22px; margin-top: 18px; display: flex; justify-content: space-between; align-items: center; }
+    .net-box .net-label { font-weight: 700; color: #0369a1; }
+    .net-box .net-val { font-size: 1.4rem; font-weight: 800; color: #0369a1; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="detail-page">
+    <a href="{% url 'SIDEBUTTON-PAYROLL' %}" class="detail-back"><i class="fa-solid fa-arrow-left"></i> Back to Payroll</a>
+
+    <div class="detail-card">
+        <h2>{{ employee.first_name }} {{ employee.last_name }} — {{ employee.designation }}</h2>
+
+        <div class="section">Earnings</div>
+        <div class="row"><span class="label">Basic Salary</span><span class="val">&#8369;{{ gross|floatformat:2|intcomma }}</span></div>
+
+        <div class="section">Deductions</div>
+        <div class="row"><span class="label">Withholding Tax</span><span class="val red">&#8369;{{ tax|floatformat:2|intcomma }}</span></div>
+        <div class="row"><span class="label">SSS (5%)</span><span class="val red">&#8369;{{ sss|floatformat:2|intcomma }}</span></div>
+        <div class="row"><span class="label">PhilHealth (2.5%)</span><span class="val red">&#8369;{{ philhealth|floatformat:2|intcomma }}</span></div>
+        <div class="row"><span class="label">Pag-IBIG</span><span class="val red">&#8369;{{ pagibig|floatformat:2|intcomma }}</span></div>
+        <div class="row"><span class="label">Loan Deductions</span><span class="val red">&#8369;{{ loan_deduction|floatformat:2|intcomma }}</span></div>
+        <div class="row" style="border-top:1px solid var(--border); margin-top:8px; padding-top:10px;">
+            <span class="label" style="font-weight:700;">Total Deductions</span>
+            <span class="val red">&#8369;{{ total_deductions|floatformat:2|intcomma }}</span>
+        </div>
+
+        <div class="net-box">
+            <span class="net-label">Net Pay</span>
+            <span class="net-val">&#8369;{{ net_pay|floatformat:2|intcomma }}</span>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px;">
+            <div style="border:1px solid var(--border); border-radius:10px; padding:12px 16px;">
+                <div style="font-size:0.7rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">1st Period</div>
+                <div style="font-size:1rem; font-weight:700; color:var(--primary); margin-top:4px;">&#8369;{{ first_period|floatformat:2|intcomma }}</div>
+            </div>
+            <div style="border:1px solid var(--border); border-radius:10px; padding:12px 16px;">
+                <div style="font-size:0.7rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">2nd Period</div>
+                <div style="font-size:1rem; font-weight:700; color:var(--primary); margin-top:4px;">&#8369;{{ second_period|floatformat:2|intcomma }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

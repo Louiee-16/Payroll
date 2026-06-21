@@ -461,13 +461,13 @@ async function recalc() {
 
     const loanData = await getLoanData(_emp.id);
     
-    const loanDeduction = parseFloat(loanData.total_monthly) || 0;
+    const loanDeduction = (parseFloat(loanData.total_monthly) || 0) / FREQ_DIVISOR;
 
    
     const tax = withholdingTax(monthly) / FREQ_DIVISOR;
     const sssPersonal = (monthly * 0.05) / FREQ_DIVISOR;
     const philPersonal = (monthly * 0.025) / FREQ_DIVISOR;
-    const pagibig = 200 / FREQ_DIVISOR;
+    const pagibig = Math.min(monthly * 0.02, 200) / FREQ_DIVISOR;
     
 
     const dailyRate = monthly / totalDays;

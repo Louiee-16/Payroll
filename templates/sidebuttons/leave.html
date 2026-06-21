@@ -136,8 +136,8 @@
                     </td>
                     <td class="action-btns">
                         {% if leave.status == 'PENDING' %}
-                            <a href="{% url 'UPDATE-LEAVE' leave.id 'APPROVED' %}"><button class="btn-approve">Approve</button></a>
-                            <a href="{% url 'UPDATE-LEAVE' leave.id 'REJECTED' %}"><button class="btn-reject">Reject</button></a>
+                            <form method="POST" action="{% url 'UPDATE-LEAVE' leave.id 'APPROVED' %}" style="display:inline;">{% csrf_token %}<button class="btn-approve" type="submit">Approve</button></form>
+                            <form method="POST" action="{% url 'UPDATE-LEAVE' leave.id 'REJECTED' %}" style="display:inline;">{% csrf_token %}<button class="btn-reject" type="submit">Reject</button></form>
                         {% else %}
                             <span style="font-size: 0.7rem; color: #9ca3af;">Finalized</span>
                         {% endif %}

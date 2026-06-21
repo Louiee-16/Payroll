@@ -103,8 +103,12 @@ def Input_loans(request):
 
         loan_instance, _ = loans.objects.get_or_create(employee=employee)
 
+        ALLOWED_LOAN_FIELDS = {
+            'SSS_salary', 'SSS_calamity', 'SSS_MPL', 'SSS_educ',
+            'PAGIBIG_MPL', 'PAGIBIG_housing', 'COOP',
+        }
         selected = request.POST.get('loanType')
-        if selected:
+        if selected and selected in ALLOWED_LOAN_FIELDS:
             amount = request.POST.get('total_amount') or 0
             monthly = request.POST.get('monthly') or 0
             setattr(loan_instance, selected, amount)

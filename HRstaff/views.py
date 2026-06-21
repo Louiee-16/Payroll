@@ -40,6 +40,7 @@ def HR_dashboard(request):
     dept_data   = [d['count'] for d in dept_qs]
 
     # ── 2. Monthly Payroll Cost — last 6 months (bar chart) ─────────────
+    from payroll.models import PayrollRun
     payroll_labels = []
     payroll_data   = []
     for i in range(5, -1, -1):
@@ -50,8 +51,12 @@ def HR_dashboard(request):
             y -= 1
         month_name = cal.month_abbr[m]
         payroll_labels.append(f"{month_name} {y}")
-        total = active_employees.aggregate(t=Sum('basic_pay'))['t'] or 0
-        payroll_data.append(float(total))
+        run = PayrollRun.objects.filter(start_date__year=y, start_date__month=m).first()
+        if run:
+            payroll_data.append(float(run.total_gross))
+        else:
+            total = active_employees.aggregate(t=Sum('basic_pay'))['t'] or 0
+            payroll_data.append(float(total))
 
     # ── 3. Attendance This Week (bar chart — present/absent/late) ───────
     week_start     = today - datetime.timedelta(days=today.weekday())
@@ -112,6 +117,9 @@ def HR_dashboard(request):
     return render(request, 'dashboards/HR_dashboard.html', context)
 
 
+from django.views.decorators.http import require_POST
+
+@require_POST
 @staff_required
 def ARCHIVE(request, id):
     employee = get_object_or_404(Employees, id=id)

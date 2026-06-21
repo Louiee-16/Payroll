@@ -66,7 +66,7 @@ def PAYROLL(request):
     ).select_related('employee'):
         attendance_by_emp.setdefault(att.employee_id, []).append(att)
 
-    employees = list(Employees.objects.prefetch_related('employee_loans'))
+    employees = list(Employees.objects.filter(is_archive=False).prefetch_related('employee_loans'))
 
     total_gross          = Decimal('0')
     total_deductions_all = Decimal('0')
@@ -297,7 +297,7 @@ def download_payroll(request):
     period_end   = today.replace(day=last_day)
     period_str   = f"{period_start.strftime('%B %d, %Y')}  -  {period_end.strftime('%B %d, %Y')}"
 
-    employees_qs = Employees.objects.prefetch_related('employee_loans').all()
+    employees_qs = Employees.objects.filter(is_archive=False).prefetch_related('employee_loans')
 
     # ── Build per-employee payroll rows ─────────────────────────────────
     rows = []
