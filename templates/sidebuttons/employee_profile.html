@@ -1,0 +1,240 @@
+{% extends 'base_hr.html' %}
+{% load humanize %}
+
+{% block title %}{{ emp.first_name }} {{ emp.last_name }} | PAYER HR{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-page { padding: 30px; }
+
+    .profile-back { display: inline-flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); text-decoration: none; margin-bottom: 20px; }
+    .profile-back:hover { color: var(--primary-blue); }
+
+    /* ── Header card ── */
+    .profile-header {
+        display: flex; align-items: center; gap: 24px;
+        background: var(--card-bg); border: 1px solid var(--border); border-radius: 20px;
+        padding: 28px 32px; margin-bottom: 24px;
+    }
+    .profile-avatar {
+        width: 72px; height: 72px; border-radius: 50%;
+        background: rgba(59,130,246,0.1); color: var(--primary-blue);
+        font-size: 1.5rem; font-weight: 800;
+        display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .profile-name { font-size: 1.4rem; font-weight: 800; color: var(--text-main); }
+    .profile-sub { color: var(--text-muted); font-size: 0.85rem; margin-top: 2px; }
+    .profile-badges { display: flex; gap: 8px; margin-top: 8px; }
+    .p-badge {
+        font-size: 0.7rem; font-weight: 700; padding: 4px 12px; border-radius: 20px;
+    }
+    .p-badge-blue { background: rgba(59,130,246,0.1); color: #2563eb; }
+    .p-badge-green { background: #f0fdf4; color: #16a34a; }
+    .p-badge-amber { background: #fff7ed; color: #c2410c; }
+
+    /* ── Grid layout ── */
+    .profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .profile-grid .full { grid-column: span 2; }
+
+    /* ── Card ── */
+    .p-card {
+        background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px;
+        padding: 22px 26px;
+    }
+    .p-card-title {
+        font-size: 0.72rem; font-weight: 800; text-transform: uppercase;
+        letter-spacing: .06em; color: var(--text-muted); margin-bottom: 16px;
+        padding-bottom: 8px; border-bottom: 1px solid var(--border);
+    }
+
+    /* Info rows */
+    .info-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 0.85rem; }
+    .info-row .label { color: var(--text-muted); }
+    .info-row .val { font-weight: 600; color: var(--text-main); }
+    .info-row .val.green { color: #10b981; }
+    .info-row .val.red { color: #ef4444; }
+    .info-row .val.blue { color: #2563eb; }
+
+    /* ── Attendance table ── */
+    .att-table { width: 100%; border-collapse: collapse; }
+    .att-table th {
+        text-align: left; padding: 10px 12px; font-size: 0.7rem;
+        text-transform: uppercase; color: var(--text-muted);
+        border-bottom: 1px solid var(--border); background: var(--main-bg);
+    }
+    .att-table td {
+        padding: 12px 12px; font-size: 0.82rem; color: var(--text-main);
+        border-bottom: 1px solid var(--border);
+    }
+    .att-table tbody tr:last-child td { border-bottom: none; }
+
+    .chip { display: inline-flex; align-items: center; gap: 4px; font-size: 0.7rem; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+    .chip-on { background: #f0fdf4; color: #16a34a; }
+    .chip-late { background: #fff7ed; color: #c2410c; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-page">
+
+    <a href="{% url 'SIDEBUTTON-TEAM' %}" class="profile-back">
+        <i class="fa-solid fa-arrow-left"></i> Back to Team
+    </a>
+
+    {% if messages %}
+    {% for msg in messages %}
+    <div style="padding:12px 18px; border-radius:10px; margin-bottom:16px; font-size:0.85rem; font-weight:600; background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0;">{{ msg }}</div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- Header -->
+    <div class="profile-header" style="justify-content:space-between;">
+        <div style="display:flex; align-items:center; gap:24px;">
+            <div class="profile-avatar">{{ emp.first_name|slice:":1" }}{{ emp.last_name|slice:":1" }}</div>
+            <div>
+                <div class="profile-name">{{ emp.first_name }} {{ emp.last_name }}</div>
+                <div class="profile-sub">{{ emp.designation }} &middot; {{ emp.department }}</div>
+                <div class="profile-badges">
+                    <span class="p-badge p-badge-blue">{{ emp.employee_id }}</span>
+                <span class="p-badge {% if emp.status == 'PERMANENT' %}p-badge-green{% else %}p-badge-amber{% endif %}">{{ emp.get_status_display }}</span>
+                </div>
+            </div>
+        </div>
+        <div style="display:flex; gap:10px;">
+            <a href="{% url 'EDIT-EMPLOYEE' emp.id %}" style="padding:9px 18px; border-radius:10px; font-size:0.82rem; font-weight:700; border:1.5px solid var(--border); background:var(--card-bg); color:var(--text-main); text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+                <i class="fa-solid fa-pen-to-square"></i> Edit
+            </a>
+            <button onclick="document.getElementById('resetPwModal').style.display='flex'" style="padding:9px 18px; border-radius:10px; font-size:0.82rem; font-weight:700; border:none; background:#ef4444; color:white; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                <i class="fa-solid fa-key"></i> Reset Password
+            </button>
+        </div>
+    </div>
+
+    <!-- Reset Password Modal -->
+    <div id="resetPwModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); align-items:center; justify-content:center; z-index:999;">
+        <div style="background:var(--card-bg); border-radius:16px; padding:28px; width:380px; border:1px solid var(--border);">
+            <h3 style="font-size:1rem; margin-bottom:16px; color:var(--text-main);">Reset Password for {{ emp.first_name }}</h3>
+            <form method="POST" action="{% url 'RESET-PASSWORD' emp.id %}">
+                {% csrf_token %}
+                <div style="margin-bottom:16px;">
+                    <label style="font-size:0.72rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); display:block; margin-bottom:6px;">New Password</label>
+                    <input type="password" name="new_password" required minlength="6" style="width:100%; padding:10px 14px; border:1px solid var(--border); border-radius:10px; font-size:0.88rem;">
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button type="submit" style="flex:2; padding:10px; border:none; border-radius:10px; background:var(--primary-blue); color:white; font-weight:700; cursor:pointer;">Set Password</button>
+                    <button type="button" onclick="document.getElementById('resetPwModal').style.display='none'" style="flex:1; padding:10px; border:1.5px solid var(--border); border-radius:10px; background:var(--card-bg); color:var(--text-main); font-weight:700; cursor:pointer;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="profile-grid">
+
+        <!-- Personal Info -->
+        <div class="p-card">
+            <div class="p-card-title">Personal Information</div>
+            <div class="info-row"><span class="label">Employee ID</span><span class="val">{{ emp.employee_id }}</span></div>
+            <div class="info-row"><span class="label">Email</span><span class="val">{{ emp.email_address }}</span></div>
+            <div class="info-row"><span class="label">Mobile</span><span class="val">{{ emp.mobile_number|default:"—" }}</span></div>
+            <div class="info-row"><span class="label">Address</span><span class="val">{{ emp.address }}</span></div>
+            <div class="info-row"><span class="label">Degree</span><span class="val">{{ emp.degree }}</span></div>
+            <div class="info-row"><span class="label">Date Hired</span><span class="val">{{ emp.date_hired|date:"M d, Y" }}</span></div>
+            <div class="info-row"><span class="label">RFID</span><span class="val">{{ emp.RFID|default:"Not assigned" }}</span></div>
+            <div class="info-row"><span class="label">Bank</span><span class="val">{{ emp.bank|default:"—" }}</span></div>
+            <div class="info-row"><span class="label">Duty Schedule</span><span class="val">{{ emp.duty_in|time:"g:i A" }} – {{ emp.duty_out|time:"g:i A" }}</span></div>
+        </div>
+
+        <!-- Payroll Snapshot -->
+        <div class="p-card">
+            <div class="p-card-title">Payroll Snapshot (Monthly)</div>
+            <div class="info-row"><span class="label">Basic Salary</span><span class="val">&#8369;{{ salary|floatformat:2|intcomma }}</span></div>
+            <div class="info-row"><span class="label">Withholding Tax</span><span class="val red">&#8369;{{ tax|floatformat:2|intcomma }}</span></div>
+            <div class="info-row"><span class="label">SSS (5%)</span><span class="val red">&#8369;{{ sss|floatformat:2|intcomma }}</span></div>
+            <div class="info-row"><span class="label">PhilHealth (2.5%)</span><span class="val red">&#8369;{{ philhealth|floatformat:2|intcomma }}</span></div>
+            <div class="info-row"><span class="label">Pag-IBIG</span><span class="val red">&#8369;{{ pagibig|floatformat:2|intcomma }}</span></div>
+            <div class="info-row"><span class="label">Loan Deductions</span><span class="val red">&#8369;{{ loan_monthly|floatformat:2|intcomma }}</span></div>
+            <div class="info-row" style="border-top:1px solid var(--border); margin-top:8px; padding-top:10px;">
+                <span class="label" style="font-weight:700;">Total Deductions</span>
+                <span class="val red" style="font-size:0.95rem;">&#8369;{{ total_ded|floatformat:2|intcomma }}</span>
+            </div>
+            <div class="info-row" style="border-top:1px solid var(--border); margin-top:4px; padding-top:10px;">
+                <span class="label" style="font-weight:700;">Net Pay</span>
+                <span class="val green" style="font-size:1.1rem;">&#8369;{{ net_pay|floatformat:2|intcomma }}</span>
+            </div>
+        </div>
+
+        <!-- Leave Balances -->
+        <div class="p-card">
+            <div class="p-card-title">Leave Balances</div>
+            <div class="info-row"><span class="label">Vacation Leave</span><span class="val blue">{{ balance.vacation|floatformat:1 }} days</span></div>
+            <div class="info-row"><span class="label">Sick Leave</span><span class="val blue">{{ balance.sick|floatformat:1 }} days</span></div>
+            <div class="info-row"><span class="label">SPL</span><span class="val blue">{{ balance.spl|floatformat:1 }} days</span></div>
+            <div class="info-row"><span class="label">Solo Parent</span><span class="val">{{ balance.solo_parent|floatformat:1 }} days</span></div>
+            <div class="info-row"><span class="label">Maternity</span><span class="val">{{ balance.maternity|floatformat:0 }} days</span></div>
+            <div class="info-row"><span class="label">Paternity</span><span class="val">{{ balance.paternity|floatformat:0 }} days</span></div>
+        </div>
+
+        <!-- Loan Summary -->
+        <div class="p-card">
+            <div class="p-card-title">Loan Summary</div>
+            {% if loan_record %}
+                {% if loan_record.SSS_salary %}<div class="info-row"><span class="label">SSS Salary Loan</span><span class="val red">&#8369;{{ loan_record.SSS_salary|floatformat:2|intcomma }}</span></div>{% endif %}
+                {% if loan_record.SSS_calamity %}<div class="info-row"><span class="label">SSS Calamity</span><span class="val red">&#8369;{{ loan_record.SSS_calamity|floatformat:2|intcomma }}</span></div>{% endif %}
+                {% if loan_record.SSS_MPL %}<div class="info-row"><span class="label">SSS MPL</span><span class="val red">&#8369;{{ loan_record.SSS_MPL|floatformat:2|intcomma }}</span></div>{% endif %}
+                {% if loan_record.SSS_educ %}<div class="info-row"><span class="label">SSS Educational</span><span class="val red">&#8369;{{ loan_record.SSS_educ|floatformat:2|intcomma }}</span></div>{% endif %}
+                {% if loan_record.PAGIBIG_housing %}<div class="info-row"><span class="label">Pag-IBIG Housing</span><span class="val red">&#8369;{{ loan_record.PAGIBIG_housing|floatformat:2|intcomma }}</span></div>{% endif %}
+                {% if loan_record.PAGIBIG_MPL %}<div class="info-row"><span class="label">Pag-IBIG MPL</span><span class="val red">&#8369;{{ loan_record.PAGIBIG_MPL|floatformat:2|intcomma }}</span></div>{% endif %}
+                {% if loan_record.COOP %}<div class="info-row"><span class="label">Coop Loan</span><span class="val red">&#8369;{{ loan_record.COOP|floatformat:2|intcomma }}</span></div>{% endif %}
+                <div class="info-row" style="border-top:1px solid var(--border); margin-top:8px; padding-top:10px;">
+                    <span class="label" style="font-weight:700;">Total Outstanding</span>
+                    <span class="val red">&#8369;{{ loan_record.total_loans|floatformat:2|intcomma }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label" style="font-weight:700;">Monthly Deduction</span>
+                    <span class="val red">&#8369;{{ loan_record.monthly_deductions|floatformat:2|intcomma }}</span>
+                </div>
+            {% else %}
+                <p style="color: var(--text-muted); font-size: 0.85rem;">No active loans.</p>
+            {% endif %}
+        </div>
+
+        <!-- Recent Attendance -->
+        <div class="p-card full">
+            <div class="p-card-title">Recent Attendance (Last 10 Days)</div>
+            <table class="att-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Time In</th>
+                        <th>Time Out</th>
+                        <th>Hours</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in recent_logs %}
+                    <tr>
+                        <td style="font-weight:600;">{{ log.date|date:"M d, Y" }}</td>
+                        <td>{{ log.time_in|time:"h:i A"|default:"—" }}</td>
+                        <td>{{ log.time_out|time:"h:i A"|default:"—" }}</td>
+                        <td>{% if log.hours_worked %}{{ log.hours_worked }}h{% else %}—{% endif %}</td>
+                        <td>
+                            {% if log.is_late %}
+                                <span class="chip chip-late">{{ log.late_minutes }}m late</span>
+                            {% else %}
+                                <span class="chip chip-on">On time</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" style="text-align:center; padding:30px; color:var(--text-muted);">No attendance records found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

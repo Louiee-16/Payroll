@@ -272,7 +272,7 @@
             <tbody id="logTableBody">
                 {% for log in logs %}
                 <tr data-name="{{ log.employee.first_name|lower }} {{ log.employee.last_name|lower }}"
-                    data-rfid="{{ log.employee.rfid_uid }}">
+                    data-rfid="{{ log.employee.RFID }}">
                     <td>
                         <div class="emp-cell">
                             <div class="emp-avatar">
@@ -281,11 +281,11 @@
                             <div>
                                 <div class="emp-name">{{ log.employee.first_name }} {{ log.employee.last_name }}</div>
                                 <div class="emp-role">{{ log.employee.designation }}</div>
-                                <div class="emp-rfid">{{ log.employee.rfid_uid }}</div>
+                                <div class="emp-rfid">{{ log.employee.RFID }}</div>
                             </div>
                         </div>
                     </td>
-                    <td><code style="font-size:0.78rem; color:#6b7280;">{{ log.employee.rfid_uid }}</code></td>
+                    <td><code style="font-size:0.78rem; color:#6b7280;">{{ log.employee.RFID }}</code></td>
                     <td>
                         {% if log.time_out %}
                             <span class="chip chip-out"><i class="fa-solid fa-right-from-bracket fa-xs"></i> Timed Out</span>

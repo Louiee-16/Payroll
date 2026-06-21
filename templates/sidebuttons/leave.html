@@ -25,6 +25,23 @@
     .btn-approve { background: #16a34a; color: white; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.75rem; }
     .btn-reject { background: #dc2626; color: white; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.75rem; }
     .btn-approve:hover, .btn-reject:hover { opacity: 0.8; }
+
+    /* Credit Leave Card */
+    .credit-card { background: white; border-radius: 16px; border: 1px solid var(--border); padding: 24px; margin-bottom: 30px; }
+    .credit-card h3 { font-size: 0.9rem; font-weight: 700; margin-bottom: 16px; color: var(--text-main); }
+    .credit-form { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+    .credit-form .field { display: flex; flex-direction: column; gap: 6px; }
+    .credit-form .field label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #9ca3af; }
+    .credit-form .field select,
+    .credit-form .field input { padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); font-size: 0.85rem; background: #fdfdfd; }
+    .credit-form .field select { min-width: 200px; }
+    .credit-form .field input[type="number"] { width: 90px; }
+    .btn-credit { padding: 10px 20px; border-radius: 10px; border: none; background: #8b5cf6; color: white; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: opacity .15s; white-space: nowrap; }
+    .btn-credit:hover { opacity: 0.85; }
+
+    /* Alert */
+    .alert { padding: 12px 18px; border-radius: 10px; margin-bottom: 20px; font-size: 0.85rem; font-weight: 600; }
+    .alert-success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
 </style>
 {% endblock %}
 
@@ -33,6 +50,43 @@
     <div class="payroll-header">
         <h1>Leave Approvals</h1>
         <p style="color: var(--text-muted);">Review and manage employee leave requests.</p>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+    {% for msg in messages %}
+    <div class="alert alert-{{ msg.tags }}">{{ msg }}</div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- Credit Special Leave -->
+    <div class="credit-card">
+        <h3>Credit Special Leave</h3>
+        <form class="credit-form" action="{% url 'CREDIT-LEAVE' %}" method="POST">
+            {% csrf_token %}
+            <div class="field" style="flex:2;">
+                <label>Employee</label>
+                <select name="employee_id" required>
+                    <option value="">Select employee...</option>
+                    {% for emp in employees %}
+                    <option value="{{ emp.id }}">{{ emp.first_name }} {{ emp.last_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field" style="flex:2;">
+                <label>Leave Type</label>
+                <select name="leave_field" required id="creditLeaveType" onchange="updateDefaultDays()">
+                    {% for field, label, default_days in credit_leave_types %}
+                    <option value="{{ field }}" data-days="{{ default_days }}">{{ label }} ({{ default_days }}d)</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field" style="flex:1;">
+                <label>Days</label>
+                <input type="number" name="days" id="creditDays" min="1" value="7" required>
+            </div>
+            <button type="submit" class="btn-credit">Credit Leave</button>
+        </form>
     </div>
 
     <!-- Stats -->
@@ -98,4 +152,12 @@
         </table>
     </div>
 </div>
+
+<script>
+function updateDefaultDays() {
+    const sel = document.getElementById('creditLeaveType');
+    const days = sel.options[sel.selectedIndex].dataset.days;
+    document.getElementById('creditDays').value = days;
+}
+</script>
 {% endblock %}

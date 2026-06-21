@@ -33,15 +33,15 @@ class loans(models.Model):
     total_loans = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     monthly_deductions = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
-    # --- THIS MUST BE INDENTED INSIDE THE CLASS ---
     def save(self, *args, **kwargs):
         def force_decimal(value):
             if value is None or value == "":
                 return Decimal('0')
             try:
                 return Decimal(str(value))
-            except:
+            except (ValueError, ArithmeticError):
                 return Decimal('0')
+
         self.total_loans = sum([
             force_decimal(self.SSS_salary),
             force_decimal(self.SSS_calamity),
@@ -52,7 +52,6 @@ class loans(models.Model):
             force_decimal(self.COOP),
         ])
 
-        # Total Monthly Deductions
         self.monthly_deductions = sum([
             force_decimal(self.SSS_salary_monthly),
             force_decimal(self.SSS_calamity_monthly),
@@ -62,6 +61,5 @@ class loans(models.Model):
             force_decimal(self.PAGIBIG_housing_monthly),
             force_decimal(self.COOP_monthly),
         ])
-        
-        print(f"DEBUG: Calculated total_loans is {self.total_loans}")
+
         super().save(*args, **kwargs)

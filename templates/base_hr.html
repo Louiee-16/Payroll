@@ -5,46 +5,200 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}HR Dashboard | PAYER{% endblock %}</title>
-    
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
     <style>
         :root {
-            --sidebar-bg: #1e1e1e;
-            --sidebar-active: #333333;
-            --main-bg: #f9fafb;
+            --sidebar-bg: #0f172a;
+            --sidebar-hover: rgba(255,255,255,0.06);
+            --sidebar-active-bg: rgba(59,130,246,0.12);
+            --sidebar-active-text: #60a5fa;
+            --sidebar-text: #94a3b8;
+            --sidebar-width: 260px;
+
+            --main-bg: #f1f5f9;
             --card-bg: #ffffff;
-            --text-main: #111827;
-            --text-muted: #6b7280;
+            --text-main: #0f172a;
+            --text-secondary: #334155;
+            --text-muted: #64748b;
+            --primary: #2563eb;
+            --primary-light: rgba(37,99,235,0.08);
+            --border: #e2e8f0;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.08);
+            --radius: 12px;
+            --radius-lg: 16px;
+
             --primary-blue: #2563eb;
-            --border: #e5e7eb;
+        }
+
+        body.dark-mode {
+            --sidebar-bg: #020617;
+            --sidebar-hover: rgba(255,255,255,0.05);
+            --sidebar-active-bg: rgba(59,130,246,0.15);
+            --main-bg: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --text-muted: #64748b;
+            --border: #334155;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.25);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.3);
+            --primary-blue: #3b82f6;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
-        body { display: flex; background-color: var(--main-bg); height: 100vh; overflow: hidden; }
+        body { display: flex; background: var(--main-bg); height: 100vh; overflow: hidden; transition: background 0.3s; }
 
-        /* --- SIDEBAR --- */
-        aside { width: 260px; background-color: var(--sidebar-bg); color: #ffffff; display: flex; flex-direction: column; padding: 25px 15px; }
-        .logo { font-size: 1.5rem; font-weight: 800; margin-bottom: 40px; padding-left: 10px; display: flex; align-items: center; gap: 10px; }
-        .logo i { color: var(--primary-blue); transform: rotate(45deg); }
-        .menu-label { font-size: 0.7rem; text-transform: uppercase; color: #555; margin: 20px 10px 10px; font-weight: 700; }
-        .nav-link { display: flex; align-items: center; gap: 12px; padding: 12px 15px; color: #9ca3af; text-decoration: none; font-size: 0.9rem; border-radius: 10px; transition: 0.2s; margin-bottom: 5px; }
-        .nav-link:hover, .nav-link.active { background-color: var(--sidebar-active); color: #ffffff; }
+        /* ═══ SIDEBAR ═══════════════════════════════════════════════════════ */
+        aside {
+            width: var(--sidebar-width); background: var(--sidebar-bg);
+            display: flex; flex-direction: column; padding: 0;
+            border-right: 1px solid rgba(255,255,255,0.06);
+            transition: width 0.3s;
+            overflow-y: auto; overflow-x: hidden;
+        }
 
-        /* --- MAIN CONTENT --- */
-        main { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
-        header { padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; background: var(--main-bg); }
-        .search-container { position: relative; width: 300px; }
-        .search-container input { width: 100%; padding: 10px 15px 10px 40px; border-radius: 8px; border: 1px solid var(--border); outline: none; background: #fff; }
-        .search-container i { position: absolute; left: 15px; top: 12px; color: var(--text-muted); }
-        .top-tools { display: flex; align-items: center; gap: 20px; }
-        .mode-toggle { display: flex; background: #fff; border: 1px solid var(--border); border-radius: 30px; padding: 4px; }
-        .mode-btn { border: none; background: transparent; padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; }
-        .mode-btn.active { background: var(--text-main); color: white; }
+        .sidebar-brand {
+            padding: 24px 22px; display: flex; align-items: center; gap: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .brand-icon {
+            width: 36px; height: 36px; border-radius: 10px;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 1rem; font-weight: 800;
+        }
+        .brand-name { font-size: 1.15rem; font-weight: 800; color: #f8fafc; letter-spacing: -0.02em; }
+        .brand-tag { font-size: 0.6rem; color: #475569; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 1px; }
 
-        /* Content spacing */
-        .page-wrapper { padding: 0 40px 40px; }
+        .nav-section { padding: 16px 12px 8px; }
+        .nav-label {
+            font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.1em; color: #475569; padding: 0 10px; margin-bottom: 8px;
+        }
+
+        .nav-link {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 14px; margin: 2px 0;
+            color: var(--sidebar-text); text-decoration: none;
+            font-size: 0.84rem; font-weight: 500;
+            border-radius: 10px; transition: all 0.15s;
+            position: relative;
+        }
+        .nav-link i { width: 18px; text-align: center; font-size: 0.9rem; opacity: 0.7; transition: opacity 0.15s; }
+        .nav-link:hover { background: var(--sidebar-hover); color: #e2e8f0; }
+        .nav-link:hover i { opacity: 1; }
+        .nav-link.active {
+            background: var(--sidebar-active-bg); color: var(--sidebar-active-text); font-weight: 600;
+        }
+        .nav-link.active i { opacity: 1; color: var(--sidebar-active-text); }
+        .nav-link.active::before {
+            content: ''; position: absolute; left: -12px; top: 50%; transform: translateY(-50%);
+            width: 3px; height: 20px; border-radius: 0 3px 3px 0; background: #3b82f6;
+        }
+
+        .sidebar-footer { margin-top: auto; padding: 16px 12px; border-top: 1px solid rgba(255,255,255,0.06); }
+
+        .logout-btn {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 14px; width: 100%;
+            color: #f87171; font-size: 0.84rem; font-weight: 500;
+            border: none; background: none; border-radius: 10px;
+            cursor: pointer; transition: all 0.15s;
+        }
+        .logout-btn:hover { background: rgba(248,113,113,0.1); }
+        .logout-btn i { width: 18px; text-align: center; font-size: 0.9rem; }
+
+        /* ═══ MAIN AREA ═════════════════════════════════════════════════════ */
+        main {
+            flex: 1; display: flex; flex-direction: column;
+            overflow-y: auto; background: var(--main-bg); transition: background 0.3s;
+        }
+
+        .top-bar {
+            padding: 16px 32px; display: flex; justify-content: space-between; align-items: center;
+            background: var(--card-bg); border-bottom: 1px solid var(--border);
+            position: sticky; top: 0; z-index: 50; box-shadow: var(--shadow-sm);
+        }
+
+        .search-container { position: relative; width: 320px; }
+        .search-container i.search-icon {
+            position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+            color: var(--text-muted); font-size: 0.85rem;
+        }
+        .search-container input {
+            width: 100%; padding: 10px 16px 10px 40px;
+            border-radius: 10px; border: 1px solid var(--border);
+            background: var(--main-bg); color: var(--text-main);
+            font-size: 0.84rem; outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .search-container input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+        .search-container input::placeholder { color: var(--text-muted); }
+
+        #searchResults {
+            display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: var(--radius); box-shadow: var(--shadow-lg);
+            z-index: 999; max-height: 320px; overflow-y: auto;
+        }
+        #searchResults a {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 16px; text-decoration: none; color: var(--text-main);
+            border-bottom: 1px solid var(--border); transition: background 0.1s;
+        }
+        #searchResults a:hover { background: var(--primary-light); }
+        #searchResults a:last-child { border-bottom: none; }
+
+        .top-tools { display: flex; align-items: center; gap: 12px; }
+
+        .theme-toggle {
+            display: flex; background: var(--main-bg); border: 1px solid var(--border);
+            border-radius: 10px; padding: 3px; gap: 2px;
+        }
+        .theme-btn {
+            border: none; background: transparent; padding: 6px 14px;
+            border-radius: 8px; font-size: 0.78rem; font-weight: 600;
+            cursor: pointer; color: var(--text-muted); transition: all 0.2s;
+        }
+        .theme-btn.active { background: var(--card-bg); color: var(--text-main); box-shadow: var(--shadow-sm); }
+        body.dark-mode .theme-btn.active { background: var(--primary); color: white; }
+
+        .notif-link {
+            position: relative; display: flex; align-items: center; justify-content: center;
+            width: 38px; height: 38px; border-radius: 10px;
+            text-decoration: none; color: var(--text-muted);
+            background: var(--main-bg); border: 1px solid var(--border);
+            font-size: 1rem; transition: all 0.15s;
+        }
+        .notif-link:hover { border-color: var(--primary); color: var(--primary); }
+        .notif-badge {
+            position: absolute; top: -4px; right: -4px;
+            background: #ef4444; color: white;
+            font-size: 0.58rem; font-weight: 800;
+            width: 18px; height: 18px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            border: 2px solid var(--card-bg);
+        }
+
+        .user-pill {
+            display: flex; align-items: center; gap: 8px;
+            padding: 6px 14px 6px 8px;
+            background: var(--main-bg); border: 1px solid var(--border);
+            border-radius: 10px; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);
+        }
+        .user-avatar {
+            width: 28px; height: 28px; border-radius: 8px;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 0.65rem; font-weight: 700;
+        }
+
+        .page-wrapper { padding: 28px 32px 40px; }
 
         {% block extra_css %}{% endblock %}
     </style>
@@ -52,61 +206,168 @@
 <body>
 
     <aside>
-        <div class="logo"><i class="fa-solid fa-bolt"></i> PAYER</div>
-        <div class="menu-label">Menu</div>
-        <nav>
-            <!-- LOGIC: Dynamic Active Class based on URL Name -->
-            <a href="{%url 'HR-DASHBOARD'%}" class="nav-link {% if request.resolver_match.url_name == 'hr-home' %}active{% endif %}">
+        <div class="sidebar-brand">
+            <div class="brand-icon"><i class="fa-solid fa-bolt"></i></div>
+            <div>
+                <div class="brand-name">PAYER</div>
+                <div class="brand-tag">HRIS Platform</div>
+            </div>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-label">Main</div>
+            {% if user.role == "STAFF" %}
+            <a href="{% url 'HR-DASHBOARD' %}" class="nav-link {% if request.resolver_match.url_name == 'HR-DASHBOARD' %}active{% endif %}">
+                <i class="fa-solid fa-chart-pie"></i> Dashboard
+            </a>
+            <a href="{% url 'SIDEBUTTON-TEAM' %}" class="nav-link {% if request.resolver_match.url_name == 'SIDEBUTTON-TEAM' or request.resolver_match.url_name == 'EMPLOYEE-PROFILE' %}active{% endif %}">
+                <i class="fa-solid fa-users"></i> Employees
+            </a>
+            <a href="{% url 'SIDEBUTTON-PAYROLL' %}" class="nav-link {% if request.resolver_match.url_name == 'SIDEBUTTON-PAYROLL' %}active{% endif %}">
+                <i class="fa-solid fa-wallet"></i> Payroll
+            </a>
+            <a href="{% url 'PAYROLL-HISTORY' %}" class="nav-link {% if request.resolver_match.url_name == 'PAYROLL-HISTORY' or request.resolver_match.url_name == 'PAYROLL-HISTORY-DETAIL' %}active{% endif %}">
+                <i class="fa-solid fa-clock-rotate-left"></i> Payroll History
+            </a>
+            <a href="{% url 'SIDEBUTTON-LOAN' %}" class="nav-link {% if request.resolver_match.url_name == 'SIDEBUTTON-LOAN' %}active{% endif %}">
+                <i class="fa-solid fa-hand-holding-dollar"></i> Loans
+            </a>
+
+            <div class="nav-label" style="margin-top:16px;">Tracking</div>
+            <a href="{% url 'SIDEBUTTON-TIME-TRACKING' %}" class="nav-link {% if request.resolver_match.url_name == 'SIDEBUTTON-TIME-TRACKING' %}active{% endif %}">
+                <i class="fa-solid fa-fingerprint"></i> Time Tracking
+            </a>
+            <a href="{% url 'SIDEBUTTON-LOGINS' %}" class="nav-link {% if request.resolver_match.url_name == 'SIDEBUTTON-LOGINS' %}active{% endif %}">
+                <i class="fa-solid fa-clipboard-list"></i> Attendance Log
+            </a>
+            <a href="{% url 'SIDEBUTTON-LEAVE' %}" class="nav-link {% if request.resolver_match.url_name == 'SIDEBUTTON-LEAVE' %}active{% endif %}">
+                <i class="fa-solid fa-calendar-xmark"></i> Leave Requests
+            </a>
+
+            <div class="nav-label" style="margin-top:16px;">Manage</div>
+            <a href="{% url 'SIDEBUTTON-ADD-EMPLOYEE' %}" class="nav-link {% if request.resolver_match.url_name == 'SIDEBUTTON-ADD-EMPLOYEE' %}active{% endif %}">
+                <i class="fa-solid fa-user-plus"></i> Add Employee
+            </a>
+            <a href="{% url 'AUDIT-LOG' %}" class="nav-link {% if request.resolver_match.url_name == 'AUDIT-LOG' %}active{% endif %}">
+                <i class="fa-solid fa-shield-halved"></i> Audit Log
+            </a>
+            {% endif %}
+
+            {% if user.role == "EMPLOYEE" %}
+            <a href="{% url 'EMPLOYEE-DASHBOARD' %}" class="nav-link {% if request.resolver_match.url_name == 'EMPLOYEE-DASHBOARD' %}active{% endif %}">
                 <i class="fa-solid fa-house"></i> Home
             </a>
-            {%if user.role == "STAFF" %}
-            <a href="{%url 'SIDEBUTTON-TEAM'%}" class="nav-link {% if request.resolver_match.url_name == 'hr-team' %}active{% endif %}">
-                <i class="fa-solid fa-users"></i> Team
+            <a href="{% url 'EMPLOYEE-PAYSLIP' %}" class="nav-link {% if request.resolver_match.url_name == 'EMPLOYEE-PAYSLIP' %}active{% endif %}">
+                <i class="fa-solid fa-receipt"></i> Payslip
             </a>
-            <a href="{%url 'SIDEBUTTON-LOGINS'%}" class="nav-link"><i class="fa-solid fa-briefcase"></i>Logins</a>
-            <a href="{%url 'SIDEBUTTON-PAYROLL'%}" class="nav-link"><i class="fa-solid fa-wallet"></i> Payroll <i class="fa-solid fa-chevron-down" style="font-size: 0.6rem; margin-left: auto;"></i></a>
-            <a href="{%url 'SIDEBUTTON-TIME-TRACKING'%}" class="nav-link"><i class="fa-solid fa-clock"></i> Time Tracking <i class="fa-solid fa-chevron-down" style="font-size: 0.6rem; margin-left: auto;"></i></a>
-            <a href="{%url 'SIDEBUTTON-LEAVE'%}" class="nav-link"><i class="fa-solid fa-clock"></i> Leaves<i class="fa-solid fa-chevron-down" style="font-size: 0.6rem; margin-left: auto;"></i></a>
+            <a href="{% url 'EMPLOYEE-LEAVE' %}" class="nav-link {% if request.resolver_match.url_name == 'EMPLOYEE-LEAVE' %}active{% endif %}">
+                <i class="fa-solid fa-calendar-check"></i> Leaves
+            </a>
+            <a href="{% url 'DTR' %}" class="nav-link {% if request.resolver_match.url_name == 'DTR' %}active{% endif %}">
+                <i class="fa-solid fa-clock-rotate-left"></i> DTR
+            </a>
 
-            <a href="{%url 'SIDEBUTTON-LOAN'%}" class="nav-link"><i class="fa-solid fa-medal"></i> LOAN</a>
-            {%endif%}
-            {%if user.role == "EMPLOYEE" %}
-            <a href="{%url 'EMPLOYEE-LEAVE' %}" class="nav-link"><i class="fa-solid fa-clock"></i> Leaves<i class="fa-solid fa-chevron-down" style="font-size: 0.6rem; margin-left: auto;"></i></a>
-            <a href="{%url 'DTR' %}" class="nav-link"><i class="fa-solid fa-clock"></i> DTR<i class="fa-solid fa-chevron-down" style="font-size: 0.6rem; margin-left: auto;"></i></a>
+            <div class="nav-label" style="margin-top:16px;">Account</div>
+            <a href="{% url 'CHANGE-PASSWORD' %}" class="nav-link {% if request.resolver_match.url_name == 'CHANGE-PASSWORD' %}active{% endif %}">
+                <i class="fa-solid fa-key"></i> Change Password
+            </a>
+            {% endif %}
 
-            {%endif%}
-        </nav>
-        <div class="menu-label">Support</div>
-        <nav>
-            {%if user.role == "STAFF"%}<a href="{%url 'SIDEBUTTON-ADD-EMPLOYEE'%}" class="nav-link"><i class="fa-solid fa-bell"></i> Add Employee</a>{%endif%}
-            <a href="#" class="nav-link"><i class="fa-solid fa-gear"></i> Settings</a>
-            <form action ="{%url 'logout'%}" method="post">
+            {% if user.role == "ADMIN" %}
+            <a href="{% url 'admin-dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'admin-dashboard' %}active{% endif %}">
+                <i class="fa-solid fa-house"></i> Home
+            </a>
+            {% endif %}
+        </div>
+
+        <div class="sidebar-footer">
+            <form action="{% url 'logout' %}" method="post">
                 {% csrf_token %}
-            <button type="submit" class="nav-link" style="color:#ef4444; margin-top:20px;"><i class="fa-solid fa-power-off"></i> Logout</button>
+                <button type="submit" class="logout-btn">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i> Log Out
+                </button>
             </form>
-        </nav>
+        </div>
     </aside>
 
     <main>
-        <header>
+        <div class="top-bar">
             <div class="search-container">
-                <i class="fa-solid fa-magnifying-glass"></i>
-                <input type="text" id="globalSearch" placeholder="Search anything...">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text" id="globalSearch" placeholder="Search employees..." autocomplete="off">
+                <div id="searchResults"></div>
             </div>
             <div class="top-tools">
-                <div class="mode-toggle">
-                    <button class="mode-btn active"><i class="fa-regular fa-sun"></i> Light</button>
-                    <button class="mode-btn"><i class="fa-regular fa-moon"></i> Dark</button>
+                <div class="theme-toggle">
+                    <button class="theme-btn" id="lightBtn" onclick="setTheme('light')"><i class="fa-regular fa-sun"></i></button>
+                    <button class="theme-btn" id="darkBtn" onclick="setTheme('dark')"><i class="fa-regular fa-moon"></i></button>
                 </div>
-                <i class="fa-regular fa-bell" style="font-size: 1.2rem;"></i>
-                <img src="https://i.pravatar.cc/100?img=12" style="width: 35px; border-radius: 50%;">
+                <a href="{% url 'NOTIFICATIONS' %}" class="notif-link">
+                    <i class="fa-regular fa-bell"></i>
+                    {% if unread_notifications > 0 %}
+                    <span class="notif-badge" id="notifBadge">{{ unread_notifications }}</span>
+                    {% endif %}
+                </a>
+                <div class="user-pill">
+                    <div class="user-avatar">{{ user.username|slice:":2"|upper }}</div>
+                    {{ user.username }}
+                </div>
             </div>
-        </header>
+        </div>
 
         <div class="page-wrapper">
             {% block content %}{% endblock %}
         </div>
     </main>
+
+    <script>
+    function setTheme(mode) {
+        if (mode === 'dark') {
+            document.body.classList.add('dark-mode');
+            document.getElementById('darkBtn').classList.add('active');
+            document.getElementById('lightBtn').classList.remove('active');
+        } else {
+            document.body.classList.remove('dark-mode');
+            document.getElementById('lightBtn').classList.add('active');
+            document.getElementById('darkBtn').classList.remove('active');
+        }
+        localStorage.setItem('theme', mode);
+    }
+    (function() { setTheme(localStorage.getItem('theme') || 'light'); })();
+
+    var searchTimer = null;
+    var searchInput = document.getElementById('globalSearch');
+    var searchBox   = document.getElementById('searchResults');
+
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimer);
+        var q = this.value.trim();
+        if (q.length < 2) { searchBox.style.display = 'none'; return; }
+        searchTimer = setTimeout(function() {
+            fetch('/HR/search/?q=' + encodeURIComponent(q))
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (!data.length) {
+                        searchBox.innerHTML = '<div style="padding:16px 18px; color:var(--text-muted); font-size:0.82rem;">No employees found.</div>';
+                    } else {
+                        searchBox.innerHTML = data.map(function(e) {
+                            return '<a href="/HR/employee/' + e.id + '/">'
+                                + '<div style="width:32px;height:32px;border-radius:8px;background:var(--primary-light);color:var(--primary);font-size:0.7rem;font-weight:700;display:flex;align-items:center;justify-content:center;">' + e.name.charAt(0) + '</div>'
+                                + '<div><div style="font-weight:600;font-size:0.84rem;">' + e.name + '</div>'
+                                + '<div style="font-size:0.7rem;color:var(--text-muted);">' + e.designation + ' &middot; ' + e.department + '</div></div></a>';
+                        }).join('');
+                    }
+                    searchBox.style.display = 'block';
+                });
+        }, 250);
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !searchBox.contains(e.target)) {
+            searchBox.style.display = 'none';
+        }
+    });
+    </script>
 
     {% block extra_js %}{% endblock %}
 </body>

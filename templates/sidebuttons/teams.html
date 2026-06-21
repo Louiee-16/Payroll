@@ -101,22 +101,22 @@
         </thead>
         <tbody>
             {%for employee in employees%}
-            <tr>
+            <tr id="emp-row" data-emp-id = "{{employee.id}}">
                 <td>
                     <div class="emp-profile">
                         <!--<div class="avatar"><img src="https://i.pravatar.cc/100?img=1"></div>-->
                         <div>
-                            <div class="emp-name">{{employee.first_name}} {{employee.last_name}}</div>
+                            <a href="{% url 'EMPLOYEE-PROFILE' employee.id %}" class="emp-name" style="text-decoration:none; color:inherit;">{{employee.first_name}} {{employee.last_name}}</a>
                             <div class="emp-email">{{employee.email_address}}</div>
                         </div>
                     </div>
                 </td>
                 <td>{{employee.designation}}</td>
                 <td><span class="rfid-tag">{{employee.RFID}}</span></td>
-                <td><span class="status-active">Active</span></td>
-                <td>
-                    <i class="fa-solid fa-pen-to-square action-icon"></i>
-                    <i class="fa-solid fa-trash action-icon" style="color: #ef4444;"></i>
+                <td><span class="status-active">{{ employee.get_status_display }}</span></td>
+                <td style="display:flex; gap:8px; align-items:center;">
+                    <a href="{% url 'EMPLOYEE-PROFILE' employee.id %}" class="action-icon" title="View Profile" style="color:var(--primary-blue);"><i class="fa-solid fa-eye"></i></a>
+                    <a onclick="archive(this)" class="action-icon" title="Archive" style="color:#ef4444; cursor:pointer;"><i class="fa-solid fa-trash"></i></a>
                 </td>
             </tr>
             {%endfor%}
@@ -165,7 +165,24 @@
 {% block extra_js %}
 <script>
 
+function archive() {
+    const confirmed = confirm("Are you sure you want to archive this employee?");
 
+    if (!confirmed) {
+        return;
+    }
+
+    const employee = document.getElementById("emp-row");
+    const emp_id = employee.getAttribute("data-emp-id");
+
+    fetch(`archive/${emp_id}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            }
+        });
+}
     // 1. Search Logic
     document.getElementById('teamSearch').addEventListener('keyup', function() {
         let filter = this.value.toUpperCase();

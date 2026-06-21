@@ -1,0 +1,73 @@
+{% extends 'base_hr.html' %}
+{% load humanize %}
+
+{% block title %}Payroll History | PAYER HR{% endblock %}
+
+{% block extra_css %}
+<style>
+    .history-page { padding: 30px; }
+    .history-page h1 { font-size: 1.3rem; font-weight: 700; color: var(--text-main); margin-bottom: 6px; }
+    .history-page .sub { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 24px; }
+
+    .history-table { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    th { padding: 14px 20px; text-align: left; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); background: var(--main-bg); border-bottom: 1px solid var(--border); }
+    td { padding: 16px 20px; font-size: 0.85rem; color: var(--text-main); border-bottom: 1px solid var(--border); }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: var(--primary-light); cursor: pointer; }
+
+    .freq-chip { font-size: 0.7rem; font-weight: 700; padding: 4px 10px; border-radius: 20px; }
+    .freq-monthly { background: rgba(59,130,246,0.1); color: #2563eb; }
+    .freq-biweekly { background: rgba(139,92,246,0.1); color: #7c3aed; }
+    .freq-weekly { background: rgba(16,185,129,0.1); color: #059669; }
+
+    .empty-state { padding: 60px; text-align: center; color: var(--text-muted); }
+    .empty-state i { font-size: 2rem; opacity: 0.3; display: block; margin-bottom: 12px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="history-page">
+    <h1>Payroll History</h1>
+    <p class="sub">All locked payroll runs. Click a row to view the frozen employee breakdown.</p>
+
+    <div class="history-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>Period</th>
+                    <th>Frequency</th>
+                    <th>Employees</th>
+                    <th>Total Gross</th>
+                    <th>Total Deductions</th>
+                    <th>Total Net</th>
+                    <th>Locked On</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for run in runs %}
+                <tr onclick="window.location='{% url 'PAYROLL-HISTORY-DETAIL' run.id %}'">
+                    <td style="font-weight:700;">{{ run.start_date|date:"M d" }} - {{ run.end_date|date:"M d, Y" }}</td>
+                    <td><span class="freq-chip freq-{{ run.frequency }}">{{ run.get_frequency_display }}</span></td>
+                    <td>{{ run.employee_count }}</td>
+                    <td>&#8369;{{ run.total_gross|floatformat:2|intcomma }}</td>
+                    <td style="color:#ef4444; font-weight:600;">&#8369;{{ run.total_deductions|floatformat:2|intcomma }}</td>
+                    <td style="font-weight:700;">&#8369;{{ run.total_net|floatformat:2|intcomma }}</td>
+                    <td style="color:var(--text-muted); font-size:0.8rem;">{{ run.created_at|date:"M d, Y h:i A" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7">
+                        <div class="empty-state">
+                            <i class="fa-regular fa-folder-open"></i>
+                            No payroll runs have been locked yet.<br>
+                            Go to Payroll and click "Lock Payroll" to create your first snapshot.
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

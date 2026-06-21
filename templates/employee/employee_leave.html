@@ -6,16 +6,23 @@
 {% block extra_css %}
 <style>
     .dashboard-container { padding: 30px; display: grid; grid-template-columns: 1fr 350px; gap: 30px; }
-    
+
     /* Stats Row */
     .balance-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 30px; grid-column: span 2; }
-    .balance-card { background: white; padding: 25px; border-radius: 20px; border: 1px solid var(--border); position: relative; overflow: hidden; }
-    .balance-card h3 { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
-    .balance-card .value { font-size: 2rem; font-weight: 800; color: var(--text-main); }
-    .balance-card .sub { font-size: 0.75rem; color: #16a34a; font-weight: 600; margin-top: 5px; }
-    .balance-card::after { content: ''; position: absolute; top: 0; right: 0; width: 5px; height: 100%; background: var(--primary-blue); }
-    .card-sl::after { background: #f59e0b; }
-    .card-spl::after { background: #8b5cf6; }
+    .balance-card { background: white; padding: 22px; border-radius: 20px; border: 1px solid var(--border); position: relative; overflow: hidden; }
+    .balance-card h3 { font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+    .balance-card .value { font-size: 1.8rem; font-weight: 800; color: var(--text-main); }
+    .balance-card .sub { font-size: 0.7rem; color: var(--text-muted); margin-top: 5px; }
+    .balance-card::after { content: ''; position: absolute; top: 0; right: 0; width: 5px; height: 100%; }
+
+    .card-vl::after   { background: #3b82f6; }
+    .card-sl::after   { background: #f59e0b; }
+    .card-spl::after  { background: #8b5cf6; }
+    .card-sp::after   { background: #10b981; }
+    .card-mat::after  { background: #ec4899; }
+    .card-pat::after  { background: #06b6d4; }
+
+    .balance-zero .value { color: #d1d5db; }
 
     /* History Table */
     .table-card { background: white; border-radius: 20px; border: 1px solid var(--border); overflow: hidden; }
@@ -40,12 +47,17 @@
     }
     .btn-apply { width: 100%; padding: 14px; background: var(--primary-blue); color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.3s; }
     .btn-apply:hover { opacity: 0.9; transform: translateY(-2px); }
+
+    /* Alert messages */
+    .alert { padding: 12px 18px; border-radius: 10px; margin-bottom: 15px; font-size: 0.85rem; font-weight: 600; }
+    .alert-success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+    .alert-error   { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="dashboard-container">
-    
+
     <!-- Left Column: Balances and History -->
     <div class="main-content">
         <div class="payroll-header" style="margin-bottom: 20px;">
@@ -53,22 +65,37 @@
             <p style="color: var(--text-muted);">Welcome, {{ employee.first_name }}. Track your leave credits and history.</p>
         </div>
 
-        <!-- Balance Buckets -->
+        <!-- Balance Cards -->
         <div class="balance-grid">
-            <div class="balance-card">
+            <div class="balance-card card-vl">
                 <h3>Vacation Leave (VL)</h3>
-                <div class="value">{{ balance.vl_earned|floatformat:2 }}</div>
-                <div class="sub">Earned: 1.25/mo</div>
+                <div class="value">{{ balance.vacation|floatformat:1 }}</div>
+                <div class="sub">15 days/year &middot; Cumulative</div>
             </div>
             <div class="balance-card card-sl">
                 <h3>Sick Leave (SL)</h3>
-                <div class="value">{{ balance.sl_earned|floatformat:2 }}</div>
-                <div class="sub">Infinite Accumulation</div>
+                <div class="value">{{ balance.sick|floatformat:1 }}</div>
+                <div class="sub">15 days/year &middot; Cumulative</div>
             </div>
             <div class="balance-card card-spl">
                 <h3>Special Privilege (SPL)</h3>
-                <div class="value">{{ balance.spl_balance|floatformat:1 }}</div>
-                <div class="sub">Use-it-or-lose-it</div>
+                <div class="value">{{ balance.spl|floatformat:1 }}</div>
+                <div class="sub">3 days/year &middot; Use-it-or-lose-it</div>
+            </div>
+            <div class="balance-card card-sp {% if balance.solo_parent == 0 %}balance-zero{% endif %}">
+                <h3>Solo Parent Leave</h3>
+                <div class="value">{{ balance.solo_parent|floatformat:1 }}</div>
+                <div class="sub">7 days/year &middot; HR credits when eligible</div>
+            </div>
+            <div class="balance-card card-mat {% if balance.maternity == 0 %}balance-zero{% endif %}">
+                <h3>Maternity Leave</h3>
+                <div class="value">{{ balance.maternity|floatformat:0 }}</div>
+                <div class="sub">105 days &middot; HR credits when applicable</div>
+            </div>
+            <div class="balance-card card-pat {% if balance.paternity == 0 %}balance-zero{% endif %}">
+                <h3>Paternity Leave</h3>
+                <div class="value">{{ balance.paternity|floatformat:0 }}</div>
+                <div class="sub">7 days &middot; First 4 deliveries</div>
             </div>
         </div>
 
@@ -89,7 +116,7 @@
                 <tbody>
                     {% for item in history %}
                     <tr>
-                        <td style="font-weight: 700;">{{ item.leave_type}}</td>
+                        <td style="font-weight: 700;">{{ item.leave_type }}</td>
                         <td>
                             <div style="font-weight: 600;">{{ item.start_date }}</div>
                             <div style="font-size: 0.7rem; color: #9ca3af;">to {{ item.end_date }}</div>
@@ -107,18 +134,33 @@
         </div>
     </div>
 
-    <!-- Right Column: Quick Application Form -->
+    <!-- Right Column: Application Form -->
     <div class="side-form">
+        {% if messages %}
+        {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags }}">{{ msg }}</div>
+        {% endfor %}
+        {% endif %}
+
         <div class="form-card">
             <h2>Apply for Leave</h2>
-            <form action = "{%url 'FILE-LEAVE'%}" method="POST">
+            <form action="{% url 'FILE-LEAVE' %}" method="POST">
                 {% csrf_token %}
                 <div class="form-group">
                     <label>Leave Type</label>
                     <select name="leave_type" required>
-                        <option value="VL">Vacation Leave</option>
-                        <option value="SL">Sick Leave</option>
-                        <option value="SPL">Special Privilege Leave</option>
+                        <option value="VACATION">Vacation Leave ({{ balance.vacation|floatformat:1 }}d)</option>
+                        <option value="SICK">Sick Leave ({{ balance.sick|floatformat:1 }}d)</option>
+                        <option value="SPL">Special Privilege Leave ({{ balance.spl|floatformat:1 }}d)</option>
+                        {% if balance.solo_parent > 0 %}
+                        <option value="SOLO_PARENT">Solo Parent Leave ({{ balance.solo_parent|floatformat:1 }}d)</option>
+                        {% endif %}
+                        {% if balance.maternity > 0 %}
+                        <option value="MATERNITY">Maternity Leave ({{ balance.maternity|floatformat:0 }}d)</option>
+                        {% endif %}
+                        {% if balance.paternity > 0 %}
+                        <option value="PATERNITY">Paternity Leave ({{ balance.paternity|floatformat:0 }}d)</option>
+                        {% endif %}
                     </select>
                 </div>
 

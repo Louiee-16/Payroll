@@ -1,0 +1,107 @@
+{% extends 'base_hr.html' %}
+{% load humanize %}
+
+{% block title %}Notifications | PAYER HR{% endblock %}
+
+{% block extra_css %}
+<style>
+    .notif-page { padding: 30px; max-width: 700px; }
+    .notif-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .notif-header h1 { font-size: 1.3rem; font-weight: 700; color: var(--text-main); }
+    .btn-mark-all {
+        padding: 8px 16px; border-radius: 8px; font-size: 0.78rem; font-weight: 700;
+        border: 1.5px solid var(--border); background: var(--card-bg); color: var(--text-main);
+        cursor: pointer;
+    }
+    .btn-mark-all:hover { border-color: var(--primary-blue); color: var(--primary-blue); }
+
+    .notif-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .notif-item {
+        display: flex; align-items: flex-start; gap: 14px;
+        background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px;
+        padding: 16px 20px; text-decoration: none; transition: background 0.15s;
+    }
+    .notif-item:hover { background: var(--main-bg); }
+    .notif-item.unread { border-left: 3px solid var(--primary-blue); }
+
+    .notif-icon {
+        width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center; font-size: 0.9rem;
+    }
+    .icon-approved  { background: #f0fdf4; color: #16a34a; }
+    .icon-rejected  { background: #fef2f2; color: #dc2626; }
+    .icon-filed     { background: #eff6ff; color: #2563eb; }
+    .icon-credited  { background: #faf5ff; color: #7c3aed; }
+    .icon-password  { background: #fff7ed; color: #c2410c; }
+
+    .notif-content { flex: 1; }
+    .notif-msg { font-size: 0.88rem; color: var(--text-main); font-weight: 500; line-height: 1.4; }
+    .notif-item.unread .notif-msg { font-weight: 700; }
+    .notif-time { font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; }
+
+    .notif-empty {
+        text-align: center; padding: 60px 20px; color: var(--text-muted);
+        background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px;
+    }
+    .notif-empty i { font-size: 2rem; margin-bottom: 12px; display: block; opacity: 0.4; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="notif-page">
+    <div class="notif-header">
+        <h1><i class="fa-solid fa-bell"></i> Notifications</h1>
+        {% if notifications %}
+        <button class="btn-mark-all" onclick="markAllRead()">Mark all as read</button>
+        {% endif %}
+    </div>
+
+    <div class="notif-list">
+        {% for n in notifications %}
+        <div class="notif-item {% if not n.is_read %}unread{% endif %}">
+            <div class="notif-icon
+                {% if n.notification_type == 'LEAVE_APPROVED' %}icon-approved
+                {% elif n.notification_type == 'LEAVE_REJECTED' %}icon-rejected
+                {% elif n.notification_type == 'LEAVE_FILED' %}icon-filed
+                {% elif n.notification_type == 'LEAVE_CREDITED' %}icon-credited
+                {% elif n.notification_type == 'PASSWORD_RESET' %}icon-password
+                {% endif %}">
+                {% if n.notification_type == 'LEAVE_APPROVED' %}<i class="fa-solid fa-check"></i>
+                {% elif n.notification_type == 'LEAVE_REJECTED' %}<i class="fa-solid fa-xmark"></i>
+                {% elif n.notification_type == 'LEAVE_FILED' %}<i class="fa-solid fa-file-lines"></i>
+                {% elif n.notification_type == 'LEAVE_CREDITED' %}<i class="fa-solid fa-plus"></i>
+                {% elif n.notification_type == 'PASSWORD_RESET' %}<i class="fa-solid fa-key"></i>
+                {% endif %}
+            </div>
+            <div class="notif-content">
+                <div class="notif-msg">{{ n.message }}</div>
+                <div class="notif-time">{{ n.created_at|naturaltime }}</div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="notif-empty">
+            <i class="fa-regular fa-bell-slash"></i>
+            <div>No notifications yet.</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function markAllRead() {
+    fetch('{% url "MARK-ALL-READ" %}', {
+        method: 'POST',
+        headers: {'X-CSRFToken': '{{ csrf_token }}'}
+    }).then(function() {
+        document.querySelectorAll('.notif-item.unread').forEach(function(el) {
+            el.classList.remove('unread');
+        });
+        var badge = document.getElementById('notifBadge');
+        if (badge) badge.style.display = 'none';
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends 'base_hr.html' %}
+{% load humanize %}
+
+{% block title %}Audit Log | PAYER HR{% endblock %}
+
+{% block extra_css %}
+<style>
+    .audit-page { padding: 30px; }
+    .audit-page h1 { font-size: 1.3rem; font-weight: 700; color: var(--text-main); margin-bottom: 6px; }
+    .audit-page .sub { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 24px; }
+
+    .audit-table { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    th { padding: 12px 20px; text-align: left; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); background: var(--main-bg); border-bottom: 1px solid var(--border); }
+    td { padding: 14px 20px; font-size: 0.84rem; color: var(--text-main); border-bottom: 1px solid var(--border); }
+    tbody tr:last-child td { border-bottom: none; }
+
+    .action-chip {
+        font-size: 0.68rem; font-weight: 700; padding: 3px 10px; border-radius: 20px;
+        display: inline-block; white-space: nowrap;
+    }
+    .chip-login     { background: #eff6ff; color: #2563eb; }
+    .chip-create    { background: #f0fdf4; color: #16a34a; }
+    .chip-edit      { background: #fffbeb; color: #d97706; }
+    .chip-delete    { background: #fef2f2; color: #dc2626; }
+    .chip-payroll   { background: #faf5ff; color: #7c3aed; }
+    .chip-leave     { background: #ecfdf5; color: #059669; }
+    .chip-default   { background: var(--main-bg); color: var(--text-muted); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="audit-page">
+    <h1><i class="fa-solid fa-shield-halved"></i> Audit Log</h1>
+    <p class="sub">Complete record of all actions taken in the system (last 100 entries).</p>
+
+    <div class="audit-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>User</th>
+                    <th>Action</th>
+                    <th>Details</th>
+                    <th>IP Address</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td style="white-space:nowrap; color:var(--text-muted); font-size:0.8rem;">{{ log.created_at|date:"M d, Y h:i A" }}</td>
+                    <td style="font-weight:600;">{{ log.user.username|default:"System" }}</td>
+                    <td>
+                        <span class="action-chip
+                            {% if 'LOGIN' in log.action %}chip-login
+                            {% elif 'CREATED' in log.action %}chip-create
+                            {% elif 'EDITED' in log.action or 'CHANGED' in log.action or 'UPDATED' in log.action %}chip-edit
+                            {% elif 'ARCHIVED' in log.action or 'RESET' in log.action %}chip-delete
+                            {% elif 'PAYROLL' in log.action or 'ADJUSTMENT' in log.action %}chip-payroll
+                            {% elif 'LEAVE' in log.action %}chip-leave
+                            {% else %}chip-default{% endif %}">
+                            {{ log.get_action_display }}
+                        </span>
+                    </td>
+                    <td style="max-width:350px; color:var(--text-secondary);">{{ log.description }}</td>
+                    <td style="font-family:monospace; font-size:0.78rem; color:var(--text-muted);">{{ log.ip_address|default:"—" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" style="text-align:center; padding:40px; color:var(--text-muted);">No audit records yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

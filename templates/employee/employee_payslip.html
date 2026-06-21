@@ -1,0 +1,262 @@
+{% extends 'base_hr.html' %}
+{% load humanize %}
+
+{% block title %}My Payslip | PAYER HR{% endblock %}
+
+{% block extra_css %}
+<style>
+    .payslip-page { padding: 30px; max-width: 700px; margin: 0 auto; }
+    .payslip-page h1 { font-size: 1.3rem; font-weight: 700; margin-bottom: 20px; }
+
+    .payslip-card {
+        background: white; border: 1px solid var(--border); border-radius: 16px;
+        overflow: hidden; font-size: 0.88rem;
+    }
+
+    /* Header */
+    .slip-header {
+        background: var(--primary-blue); color: white; padding: 20px 28px;
+        text-align: center;
+    }
+    .slip-header h2 { font-size: 1.1rem; font-weight: 700; margin: 0 0 4px; }
+    .slip-header p { font-size: 0.8rem; opacity: 0.75; margin: 0; }
+
+    /* Employee info block */
+    .slip-info {
+        display: grid; grid-template-columns: auto 1fr; gap: 4px 16px;
+        padding: 16px 28px; border-bottom: 1px solid var(--border);
+        font-size: 0.85rem; background: #f9fafb;
+    }
+    .slip-info dt { color: #6b7280; font-weight: 700; }
+    .slip-info dd { margin: 0; font-weight: 600; }
+
+    /* Sections */
+    .slip-body { padding: 20px 28px; }
+    .section-title {
+        font-size: 0.72rem; font-weight: 800; text-transform: uppercase;
+        letter-spacing: .06em; color: #9ca3af; margin: 18px 0 10px;
+        padding-bottom: 6px; border-bottom: 1px solid #f3f4f6;
+    }
+    .section-title:first-child { margin-top: 0; }
+
+    .slip-row {
+        display: flex; justify-content: space-between; padding: 4px 0;
+    }
+    .slip-row .label { color: #374151; }
+    .slip-row .label.indent { padding-left: 14px; color: #6b7280; font-size: 0.82rem; }
+    .slip-row .amount { font-weight: 600; text-align: right; }
+    .slip-row .amount.green { color: #10b981; }
+    .slip-row .amount.red { color: #ef4444; }
+
+    .slip-row.total {
+        border-top: 1px solid #e5e7eb; margin-top: 6px; padding-top: 8px;
+        font-weight: 700;
+    }
+
+    /* Net pay */
+    .net-box {
+        display: flex; justify-content: space-between; align-items: center;
+        background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 12px;
+        padding: 16px 22px; margin: 20px 0 12px;
+    }
+    .net-box .net-label { font-weight: 700; color: #0369a1; font-size: 0.9rem; }
+    .net-box .net-amount { font-size: 1.5rem; font-weight: 800; color: #0369a1; }
+
+    .period-split {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 8px;
+    }
+    .period-box {
+        border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px 16px;
+    }
+    .period-box .p-label { font-size: 0.7rem; color: #9ca3af; font-weight: 700; text-transform: uppercase; }
+    .period-box .p-val { font-size: 1rem; font-weight: 700; color: var(--primary-blue); margin-top: 4px; }
+
+    /* Leave balances */
+    .leave-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.82rem; }
+    .leave-table th { background: #f9fafb; text-align: left; padding: 8px 10px; font-size: 0.7rem; text-transform: uppercase; color: #9ca3af; border-bottom: 1px solid #f3f4f6; }
+    .leave-table td { padding: 8px 10px; border-bottom: 1px solid #f8f9fa; }
+
+    /* Footer */
+    .slip-footer {
+        display: flex; gap: 10px; padding: 16px 28px;
+        border-top: 1px solid var(--border); background: #fafafa;
+    }
+    .slip-footer a, .slip-footer button {
+        flex: 1; text-align: center; padding: 10px; border-radius: 10px;
+        font-size: 0.82rem; font-weight: 700; cursor: pointer; text-decoration: none;
+        display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .btn-dl { border: 1.5px solid var(--border); background: white; color: var(--text-main); }
+    .btn-dl:hover { background: #f5f7fa; }
+    .btn-print { border: none; background: var(--primary-blue); color: white; }
+    .btn-print:hover { opacity: 0.88; }
+
+    /* ── Print styles ── */
+    @media print {
+        body { display: block !important; overflow: visible !important; height: auto !important; background: white !important; }
+        aside, .top-bar, .payslip-page > h1, .slip-footer { display: none !important; }
+        main { overflow: visible !important; width: 100% !important; }
+        .payslip-page { padding: 0 !important; max-width: 100% !important; }
+        .payslip-card { border: none !important; border-radius: 0 !important; }
+        .slip-header, .net-box { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        @page { size: A4 portrait; margin: 15mm; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="payslip-page">
+    <h1>My Payslip</h1>
+
+    <div class="payslip-card">
+        <!-- Header -->
+        <div class="slip-header">
+            <h2>EMPLOYEE'S PAY SLIP</h2>
+            <p>For the Period of: {{ period_str }}</p>
+        </div>
+
+        <!-- Employee Info -->
+        <dl class="slip-info">
+            <dt>ID No.:</dt>   <dd>{{ employee.employee_id }}</dd>
+            <dt>Name:</dt>     <dd>{{ employee.first_name }} {{ employee.last_name }}</dd>
+            <dt>Dept:</dt>     <dd>{{ employee.department }}</dd>
+        </dl>
+
+        <div class="slip-body">
+            <!-- Earnings -->
+            <div class="section-title">Earnings</div>
+            <div class="slip-row">
+                <span class="label">Basic Salary</span>
+                <span class="amount">{{ salary|floatformat:2|intcomma }}</span>
+            </div>
+            {% if ot_pay > 0 %}
+            <div class="slip-row">
+                <span class="label indent">Overtime ({{ ot_hours }}h x 125%)</span>
+                <span class="amount green">+{{ ot_pay|floatformat:2|intcomma }}</span>
+            </div>
+            {% endif %}
+            <div class="slip-row total">
+                <span class="label">Total Earnings:</span>
+                <span class="amount green">{{ salary|floatformat:2|intcomma }}</span>
+            </div>
+
+            <!-- 13th Month -->
+            <div class="section-title">13th Month Pay (Accrued)</div>
+            <div class="slip-row">
+                <span class="label">Accrued to date</span>
+                <span class="amount" style="color:var(--primary);">{{ thirteenth_month|floatformat:2|intcomma }}</span>
+            </div>
+
+            <!-- Deductions -->
+            <div class="section-title">Less: Contributions / Deductions</div>
+            <div class="slip-row">
+                <span class="label indent">Withholding Tax</span>
+                <span class="amount red">{{ tax|floatformat:2|intcomma }}</span>
+            </div>
+            <div class="slip-row">
+                <span class="label indent">Phil. Health Contribution</span>
+                <span class="amount red">{{ philhealth|floatformat:2|intcomma }}</span>
+            </div>
+            <div class="slip-row">
+                <span class="label indent">Pag-IBIG Premium</span>
+                <span class="amount red">{{ pagibig|floatformat:2|intcomma }}</span>
+            </div>
+            <div class="slip-row">
+                <span class="label indent">SSS Contribution</span>
+                <span class="amount red">{{ sss|floatformat:2|intcomma }}</span>
+            </div>
+            <div class="slip-row">
+                <span class="label indent">Coop Contribution</span>
+                <span class="amount red">{{ coop_share|floatformat:2|intcomma }}</span>
+            </div>
+
+            {% if active_loans %}
+            {% for name, amt in active_loans %}
+            <div class="slip-row">
+                <span class="label indent">{{ name }}</span>
+                <span class="amount red">{{ amt|floatformat:2|intcomma }}</span>
+            </div>
+            {% endfor %}
+            {% endif %}
+
+            <div class="slip-row total">
+                <span class="label">Total:</span>
+                <span class="amount red">{{ total_deductions|floatformat:2|intcomma }}</span>
+            </div>
+
+            <!-- Net Pay -->
+            <div class="net-box">
+                <span class="net-label">NET PAY:</span>
+                <span class="net-amount">&#8369;{{ net_pay|floatformat:2|intcomma }}</span>
+            </div>
+
+            <div class="period-split">
+                <div class="period-box">
+                    <div class="p-label">1st Period (1st - 15th)</div>
+                    <div class="p-val">&#8369;{{ first_half|floatformat:2|intcomma }}</div>
+                </div>
+                <div class="period-box">
+                    <div class="p-label">2nd Period (16th - End)</div>
+                    <div class="p-val">&#8369;{{ second_half|floatformat:2|intcomma }}</div>
+                </div>
+            </div>
+
+            <!-- Leave Balances -->
+            <div class="section-title">Leave Balances as of {{ period_str|truncatechars:12 }}</div>
+            <table class="leave-table">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>VL (Vacation Leave)</td><td>{{ balance.vacation|floatformat:2 }}</td></tr>
+                    <tr><td>SL (Sick Leave)</td><td>{{ balance.sick|floatformat:2 }}</td></tr>
+                    <tr><td>SPL (Special Privilege)</td><td>{{ balance.spl|floatformat:2 }}</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Footer buttons -->
+        <div class="slip-footer">
+            <a href="{% url 'DOWNLOAD-PAYSLIP' employee.id %}" class="btn-dl">
+                <i class="fa-solid fa-file-excel"></i> Download Excel
+            </a>
+            <button class="btn-print" onclick="window.print()">
+                <i class="fa-solid fa-print"></i> Print Payslip
+            </button>
+        </div>
+    </div>
+
+    {% if past_payslips %}
+    <div style="margin-top:24px; background:var(--card-bg); border:1px solid var(--border); border-radius:16px; overflow:hidden;">
+        <div style="padding:18px 24px; border-bottom:1px solid var(--border);">
+            <h3 style="font-size:0.9rem; font-weight:700; color:var(--text-main);">Payslip History</h3>
+        </div>
+        <table style="width:100%; border-collapse:collapse;">
+            <thead>
+                <tr>
+                    <th style="padding:12px 24px; text-align:left; font-size:0.7rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); background:var(--main-bg); border-bottom:1px solid var(--border);">Period</th>
+                    <th style="padding:12px 24px; text-align:left; font-size:0.7rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); background:var(--main-bg); border-bottom:1px solid var(--border);">Gross</th>
+                    <th style="padding:12px 24px; text-align:left; font-size:0.7rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); background:var(--main-bg); border-bottom:1px solid var(--border);">Net Pay</th>
+                    <th style="padding:12px 24px; text-align:left; font-size:0.7rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); background:var(--main-bg); border-bottom:1px solid var(--border);">1st Period</th>
+                    <th style="padding:12px 24px; text-align:left; font-size:0.7rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); background:var(--main-bg); border-bottom:1px solid var(--border);">2nd Period</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pp in past_payslips %}
+                <tr>
+                    <td style="padding:14px 24px; font-size:0.84rem; color:var(--text-main); border-bottom:1px solid var(--border); font-weight:600;">{{ pp.start_date|date:"M d" }} - {{ pp.end_date|date:"M d, Y" }}</td>
+                    <td style="padding:14px 24px; font-size:0.84rem; color:var(--text-main); border-bottom:1px solid var(--border);">&#8369;{{ pp.gross_salary|floatformat:2|intcomma }}</td>
+                    <td style="padding:14px 24px; font-size:0.84rem; color:#10b981; border-bottom:1px solid var(--border); font-weight:700;">&#8369;{{ pp.net_salary|floatformat:2|intcomma }}</td>
+                    <td style="padding:14px 24px; font-size:0.84rem; color:var(--text-main); border-bottom:1px solid var(--border);">&#8369;{{ pp.first_period_pay|floatformat:2|intcomma }}</td>
+                    <td style="padding:14px 24px; font-size:0.84rem; color:var(--text-main); border-bottom:1px solid var(--border);">&#8369;{{ pp.second_period_pay|floatformat:2|intcomma }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

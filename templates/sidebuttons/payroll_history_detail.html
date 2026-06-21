@@ -1,0 +1,119 @@
+{% extends 'base_hr.html' %}
+{% load humanize %}
+
+{% block title %}Payroll: {{ run.start_date|date:"M d" }} - {{ run.end_date|date:"M d, Y" }} | PAYER HR{% endblock %}
+
+{% block extra_css %}
+<style>
+    .detail-page { padding: 30px; }
+    .detail-back { display: inline-flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); text-decoration: none; margin-bottom: 20px; }
+    .detail-back:hover { color: var(--primary); }
+
+    .detail-header {
+        background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px;
+        padding: 24px 28px; margin-bottom: 24px;
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .detail-header h1 { font-size: 1.2rem; font-weight: 700; color: var(--text-main); }
+    .detail-header .meta { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
+    .locked-badge { font-size: 0.7rem; font-weight: 700; padding: 6px 14px; border-radius: 20px; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+
+    .summary-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+    .s-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 18px 22px; }
+    .s-card .s-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
+    .s-card .s-val { font-size: 1.4rem; font-weight: 800; color: var(--text-main); }
+    .s-card.s-green .s-val { color: #10b981; }
+    .s-card.s-red .s-val { color: #ef4444; }
+
+    .emp-table { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    th { padding: 12px 18px; text-align: left; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); background: var(--main-bg); border-bottom: 1px solid var(--border); }
+    td { padding: 14px 18px; font-size: 0.84rem; color: var(--text-main); border-bottom: 1px solid var(--border); }
+    tbody tr:last-child td { border-bottom: none; }
+
+    @media print {
+        body { display: block !important; overflow: visible !important; height: auto !important; background: white !important; }
+        aside, .top-bar, .detail-back, button { display: none !important; }
+        main { overflow: visible !important; width: 100% !important; }
+        .page-wrapper { padding: 0 !important; }
+        .detail-page { padding: 10px !important; }
+        .detail-header, .summary-strip .s-card, .emp-table { border: 1px solid #ccc !important; box-shadow: none !important; }
+        .locked-badge { display: inline-block !important; }
+        .detail-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .s-card { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        @page { size: landscape; margin: 10mm; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="detail-page">
+    <a href="{% url 'PAYROLL-HISTORY' %}" class="detail-back">
+        <i class="fa-solid fa-arrow-left"></i> Back to History
+    </a>
+
+    <div class="detail-header">
+        <div>
+            <h1>{{ run.start_date|date:"M d" }} - {{ run.end_date|date:"M d, Y" }}</h1>
+            <div class="meta">{{ run.get_frequency_display }} &middot; {{ run.employee_count }} employees &middot; Locked {{ run.created_at|date:"M d, Y h:i A" }}</div>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center;">
+            <span class="locked-badge"><i class="fa-solid fa-lock"></i> Locked</span>
+            <button onclick="window.print()" style="padding:8px 18px; border-radius:10px; border:1.5px solid var(--border); background:var(--card-bg); color:var(--text-main); font-size:0.82rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                <i class="fa-solid fa-print"></i> Print
+            </button>
+        </div>
+    </div>
+
+    <div class="summary-strip">
+        <div class="s-card">
+            <div class="s-label">Total Gross</div>
+            <div class="s-val">&#8369;{{ run.total_gross|floatformat:2|intcomma }}</div>
+        </div>
+        <div class="s-card s-red">
+            <div class="s-label">Total Deductions</div>
+            <div class="s-val">&#8369;{{ run.total_deductions|floatformat:2|intcomma }}</div>
+        </div>
+        <div class="s-card s-green">
+            <div class="s-label">Total Net Pay</div>
+            <div class="s-val">&#8369;{{ run.total_net|floatformat:2|intcomma }}</div>
+        </div>
+    </div>
+
+    <div class="emp-table">
+        <table>
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Gross</th>
+                    <th>Days Worked</th>
+                    <th>Late</th>
+                    <th>LWOP</th>
+                    <th>Loans</th>
+                    <th>Net Pay</th>
+                    <th>1st Period</th>
+                    <th>2nd Period</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in periods %}
+                <tr>
+                    <td>
+                        <div style="font-weight:700;">{{ p.employee.first_name }} {{ p.employee.last_name }}</div>
+                        <div style="font-size:0.72rem; color:var(--text-muted);">{{ p.employee.designation }}</div>
+                    </td>
+                    <td>&#8369;{{ p.gross_salary|floatformat:2|intcomma }}</td>
+                    <td>{{ p.days_worked }}</td>
+                    <td>{% if p.late_minutes > 0 %}<span style="color:#c2410c;">{{ p.late_minutes }}m</span>{% else %}—{% endif %}</td>
+                    <td style="color:#ef4444;">&#8369;{{ p.lwop_amount|floatformat:2|intcomma }}</td>
+                    <td style="color:#ef4444;">&#8369;{{ p.loan_deductions|floatformat:2|intcomma }}</td>
+                    <td style="font-weight:700;">&#8369;{{ p.net_salary|floatformat:2|intcomma }}</td>
+                    <td>&#8369;{{ p.first_period_pay|floatformat:2|intcomma }}</td>
+                    <td>&#8369;{{ p.second_period_pay|floatformat:2|intcomma }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

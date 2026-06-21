@@ -71,6 +71,16 @@
     .btn-view { display:inline-flex; align-items:center; gap:6px; font-size:0.75rem; font-weight:600; padding:7px 14px; border-radius:8px; border:1.5px solid var(--border); background:white; color:var(--text-main); cursor:pointer; transition:background .15s; }
     .btn-view:hover { background:#f5f7fa; }
 
+    /* ── Frequency Selector ── */
+    .freq-bar { display:flex; gap:8px; margin-bottom:20px; }
+    .btn-freq {
+        padding:8px 18px; border-radius:9px; font-size:0.8rem; font-weight:600;
+        border:1.5px solid var(--border); background:white; color:var(--text-main);
+        cursor:pointer; text-decoration:none; transition:all .15s;
+    }
+    .btn-freq:hover:not(.active) { background:#f5f7fa; border-color:#cbd5e1; }
+    .btn-freq.active { background:var(--primary-blue); color:white; border-color:var(--primary-blue); }
+
     /* ── Modal (normal-flow, no position:fixed) ── */
     .modal-overlay { display:none; min-height:620px; background:rgba(15,23,42,0.5); align-items:center; justify-content:center; border-radius:16px; margin-top:24px; padding:24px; }
     .modal-overlay.open { display:flex; }
@@ -126,6 +136,49 @@
     .ps-footer { display:flex; gap:10px; padding:16px 26px; border-top:1px solid #f3f4f6; background:#fafafa; }
     .ps-footer .btn-outline { flex:1; justify-content:center; }
     .ps-footer .btn-primary { flex:2; justify-content:center; }
+
+    /* ── Print: show ONLY the payslip modal ── */
+    @media print {
+        body { display: block !important; overflow: visible !important; height: auto !important; background: white !important; }
+        aside, .top-bar { display: none !important; }
+        main { overflow: visible !important; width: 100% !important; }
+        .page-wrapper { padding: 0 10px !important; }
+
+        /* Hide buttons/controls */
+        .header-actions, .freq-bar, .ps-footer, .btn-view, .btn-outline, .btn-primary, form { display: none !important; }
+
+        /* If payslip modal is open, hide everything else and show only the modal */
+        .modal-overlay.open ~ *, .modal-overlay.open ~ * { }
+        .modal-overlay:not(.open) { display: none !important; }
+
+        .modal-overlay.open {
+            display: block !important; position: static !important;
+            background: none !important; padding: 0 !important; margin: 0 !important;
+            min-height: auto !important; border-radius: 0 !important;
+        }
+        .modal-overlay.open ~ .table-card { display: none !important; }
+
+        .payslip-modal {
+            width: 100% !important; max-width: 100% !important;
+            border: none !important; border-radius: 0 !important; box-shadow: none !important;
+        }
+        .ps-body { max-height: none !important; overflow: visible !important; }
+
+        /* Force colors to print */
+        .ps-topbar, .ps-net, .att-box, .summary-card, .card-net {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        /* Payroll table print styles */
+        .table-card, .summary-grid, .payroll-header { border: none !important; box-shadow: none !important; }
+        .payroll-header h1 { font-size: 1.1rem !important; }
+        .period-badge { display: inline-flex !important; }
+        table { font-size: 0.75rem !important; }
+        th, td { padding: 8px 10px !important; }
+
+        @page { size: landscape; margin: 10mm; }
+    }
 </style>
 {% endblock %}
 
@@ -141,9 +194,22 @@
             </span>
         </div>
         <div class="header-actions">
-            <button class="btn-outline"><i class="fa-solid fa-file-export"></i> Export CSV</button>
-            <button class="btn-primary"><i class="fa-solid fa-calculator"></i> Run Payroll</button>
+            <button onclick="window.print()" class="btn-outline"><i class="fa-solid fa-print"></i> Print</button>
+            <a href="{% url 'PAYROLL-HISTORY' %}" class="btn-outline"><i class="fa-solid fa-clock-rotate-left"></i> History</a>
+            <a href="{% url 'DOWNLOAD-PAYROLL' %}" class="btn-outline"><i class="fa-solid fa-file-export"></i> Export Excel</a>
+            <form method="POST" action="{% url 'LOCK-PAYROLL' %}" style="display:inline;">
+                {% csrf_token %}
+                <input type="hidden" name="frequency" value="{{ frequency }}">
+                <button type="submit" class="btn-primary" onclick="return confirm('Lock this payroll period? This cannot be undone.')"><i class="fa-solid fa-lock"></i> Lock Payroll</button>
+            </form>
         </div>
+    </div>
+
+    <!-- Frequency Selector -->
+    <div class="freq-bar">
+        <a href="?frequency=monthly"  class="btn-freq {% if frequency == 'monthly'  %}active{% endif %}">Monthly</a>
+        <a href="?frequency=biweekly" class="btn-freq {% if frequency == 'biweekly' %}active{% endif %}">Every 2 Weeks</a>
+        <a href="?frequency=weekly"   class="btn-freq {% if frequency == 'weekly'   %}active{% endif %}">Weekly</a>
     </div>
 
     <!-- Summary Cards (Same as yours) -->
@@ -165,7 +231,8 @@
                     <th>Monthly Salary</th>
                     <th>Period Gross</th>
                     <th>Days Worked</th>
-                    <th>Attendance</th>
+                    <th>Status</th>
+                    <th>OT Pay</th>
                     <th>Deductions</th>
                     <th>Net Pay</th>
                     <th></th>
@@ -188,8 +255,9 @@
                     <td>{{ emp.days_worked }} / {{ emp.total_working_days }} days</td>
                     <td>
                         {% if emp.late_minutes > 0 %}<span class="chip chip-warning">{{ emp.late_minutes }}m late</span>{% endif %}
-                        {% if emp.absent_days > 0 %}<span class="chip chip-warning">{{ emp.absent_days }}d absent</span>{% endif %}
+                        {% if emp.ot_hours > 0 %}<span class="chip chip-success">{{ emp.ot_hours }}h OT</span>{% endif %}
                     </td>
+                    <td>{% if emp.ot_pay > 0 %}<span class="text-success">+₱{{ emp.ot_pay|floatformat:2|intcomma }}</span>{% else %}—{% endif %}</td>
                     <td class="text-danger">₱{{ emp.total_deductions|floatformat:2|intcomma }}</td>
                     <td class="text-bold">₱{{ emp.net_pay|floatformat:2|intcomma }}</td>
                     <td>
@@ -197,8 +265,10 @@
                         <button class="btn-view"
                             onclick="openPayslip(this)"
                             data-id="{{ emp.id }}"
+                            data-empid="{{ emp.employee_id }}"
                             data-name="{{ emp.first_name }} {{ emp.last_name }}"
                             data-designation="{{ emp.designation }}"
+                            data-department="{{ emp.department }}"
                             data-salary="{{ emp.basic_pay }}"
                             data-totaldays="{{ emp.total_working_days }}"
                             data-daysworked="{{ emp.days_worked }}"
@@ -214,14 +284,90 @@
         </table>
     </div>
 
+    <!-- Payroll Adjustments -->
+    <div class="table-card" style="margin-top:20px;">
+        <div class="table-card-header">
+            <h3>Payroll Adjustments ({{ payroll_period_label }})</h3>
+        </div>
+        <div style="padding:20px 22px; border-bottom:1px solid var(--border);">
+            <form method="POST" action="{% url 'ADD-ADJUSTMENT' %}" style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+                {% csrf_token %}
+                <input type="hidden" name="effective_month" value="{{ period_month }}">
+                <input type="hidden" name="effective_year" value="{{ period_year }}">
+                <div style="flex:2;">
+                    <label style="font-size:0.7rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); display:block; margin-bottom:4px;">Employee</label>
+                    <select name="employee_id" required style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:0.84rem; background:var(--card-bg); color:var(--text-main);">
+                        <option value="">Select...</option>
+                        {% for emp in employees %}<option value="{{ emp.id }}">{{ emp.first_name }} {{ emp.last_name }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div style="flex:1.5;">
+                    <label style="font-size:0.7rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); display:block; margin-bottom:4px;">Type</label>
+                    <select name="adjustment_type" required style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:0.84rem; background:var(--card-bg); color:var(--text-main);">
+                        <option value="BONUS">Bonus</option>
+                        <option value="ALLOWANCE">Allowance</option>
+                        <option value="REIMBURSEMENT">Reimbursement</option>
+                        <option value="DEDUCTION">Deduction</option>
+                        <option value="CASH_ADVANCE">Cash Advance</option>
+                    </select>
+                </div>
+                <div style="flex:1;">
+                    <label style="font-size:0.7rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); display:block; margin-bottom:4px;">Amount</label>
+                    <input type="number" step="0.01" name="amount" required placeholder="0.00" style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:0.84rem; background:var(--card-bg); color:var(--text-main);">
+                </div>
+                <div style="flex:2;">
+                    <label style="font-size:0.7rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); display:block; margin-bottom:4px;">Description</label>
+                    <input type="text" name="description" placeholder="e.g. Hazard pay" required style="width:100%; padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:0.84rem; background:var(--card-bg); color:var(--text-main);">
+                </div>
+                <button type="submit" class="btn-primary" style="padding:8px 16px; white-space:nowrap;"><i class="fa-solid fa-plus"></i> Add</button>
+            </form>
+        </div>
+        {% if current_adjustments %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Type</th>
+                    <th>Description</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for adj in current_adjustments %}
+                <tr>
+                    <td style="font-weight:600;">{{ adj.employee.first_name }} {{ adj.employee.last_name }}</td>
+                    <td><span class="chip {% if adj.is_earning %}chip-success{% else %}chip-warning{% endif %}">{{ adj.get_adjustment_type_display }}</span></td>
+                    <td style="color:var(--text-muted);">{{ adj.description }}</td>
+                    <td style="font-weight:700; color:{% if adj.is_earning %}#10b981{% else %}#ef4444{% endif %};">{% if adj.is_earning %}+{% else %}-{% endif %}₱{{ adj.amount|floatformat:2|intcomma }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+    </div>
+
     <!-- Payslip Modal -->
     <div class="modal-overlay" id="payslipModal">
         <div class="payslip-modal">
             <div class="ps-topbar">
-                <div><h2 id="ps-name">—</h2><p id="ps-meta">—</p></div>
+                <div><h2>EMPLOYEE'S PAY SLIP</h2><p id="ps-period">For the Period of: {{ payroll_period_label }}</p></div>
                 <span class="ps-badge">Payslip</span>
             </div>
             <div class="ps-body">
+                <!-- Employee Info Header -->
+                <div style="background:#f9fafb; border:1px solid #f3f4f6; border-radius:10px; padding:14px 18px; margin-bottom:16px;">
+                    <div style="display:grid; grid-template-columns:auto 1fr; gap:4px 14px; font-size:0.82rem;">
+                        <span style="color:#9ca3af; font-weight:700;">ID No.:</span>
+                        <span id="ps-empid" style="font-weight:600;">—</span>
+                        <span style="color:#9ca3af; font-weight:700;">Name:</span>
+                        <span id="ps-name" style="font-weight:600;">—</span>
+                        <span style="color:#9ca3af; font-weight:700;">Dept:</span>
+                        <span id="ps-dept" style="font-weight:600;">—</span>
+                        <span style="color:#9ca3af; font-weight:700;">Designation:</span>
+                        <span id="ps-meta" style="font-weight:600;">—</span>
+                    </div>
+                </div>
+
                 <div class="ps-attendance">
                     <div class="att-box"><div class="att-val" id="ps-days-worked">—</div><div class="att-lbl">Days Worked</div></div>
                     <div class="att-box"><div class="att-val" id="ps-absent-days">—</div><div class="att-lbl">Days Absent</div></div>
@@ -258,6 +404,7 @@
             </div>
             <div class="ps-footer">
                 <button class="btn-outline" onclick="closePayslip()">Close</button>
+                <a id="ps-download-link" href="#" class="btn-outline" style="text-decoration:none;text-align:center;"><i class="fa-solid fa-file-excel"></i> Download Excel</a>
                 <button class="btn-primary" onclick="window.print()">Print Slip</button>
             </div>
         </div>
@@ -267,7 +414,8 @@
 
 {% block extra_js %}
 <script>
-let _emp = {}; 
+const FREQ_DIVISOR = {{ freq_divisor }};   // 1 = monthly, 2 = biweekly, 4 = weekly
+let _emp = {};
 const loanCache = {};
 
 // Loan API Fetcher (Same as your Loan page)
@@ -288,9 +436,11 @@ async function getLoanData(employeeId) {
 
 function withholdingTax(m) {
     if (m <= 20833)  return 0;
-    if (m <= 33332)  return (m - 20833) * 0.15;
-    if (m <= 66666)  return 1875 + (m - 33333) * 0.20;
-    return 8541.8 + (m - 66667) * 0.25; // Simplified for example
+    if (m <= 33333)  return (m - 20833) * 0.15;
+    if (m <= 66667)  return 1875 + (m - 33333) * 0.20;
+    if (m <= 166667) return 8541.80 + (m - 66667) * 0.25;
+    if (m <= 666667) return 33541.80 + (m - 166667) * 0.30;
+    return 183541.80 + (m - 666667) * 0.35;
 }
 
 function fmt(n) {
@@ -314,10 +464,10 @@ async function recalc() {
     const loanDeduction = parseFloat(loanData.total_monthly) || 0;
 
    
-    const tax = withholdingTax(monthly) / 2;
-    const sssPersonal = (monthly > 35000) ? 1750 : (monthly * 0.05);
-    const philPersonal = Math.min(monthly * 0.025, 2500);
-    const pagibig = 200; 
+    const tax = withholdingTax(monthly) / FREQ_DIVISOR;
+    const sssPersonal = (monthly * 0.05) / FREQ_DIVISOR;
+    const philPersonal = (monthly * 0.025) / FREQ_DIVISOR;
+    const pagibig = 200 / FREQ_DIVISOR;
     
 
     const dailyRate = monthly / totalDays;
@@ -325,7 +475,7 @@ async function recalc() {
                     (parseFloat(_emp.lateMinutes) / 480 * dailyRate);
 
   
-    const periodGross = monthly / 2;
+    const periodGross = monthly / FREQ_DIVISOR;
     const totalDeductions = tax + sssPersonal + philPersonal + pagibig + lwopAmt + loanDeduction;
     const netPay = periodGross - totalDeductions;
 
@@ -390,8 +540,10 @@ async function openPayslip(btn) {
    
     _emp = {
         id: d.id,
+        empid: d.empid,
         name: d.name,
         designation: d.designation,
+        department: d.department,
         basicPay: d.salary,
         totalWorkingDays: d.totaldays,
         daysWorked: d.daysworked,
@@ -401,8 +553,10 @@ async function openPayslip(btn) {
     };
 
     // Set static UI
+    set('ps-empid', _emp.empid);
     set('ps-name', _emp.name);
-    set('ps-meta', `DESIGNATION: ${_emp.designation}`);
+    set('ps-dept', _emp.department);
+    set('ps-meta', _emp.designation);
     set('ps-days-worked', `${_emp.daysWorked} / ${_emp.totalWorkingDays}`);
     set('ps-absent-days', _emp.absentDays);
     set('ps-late-minutes', _emp.lateMinutes);
@@ -411,6 +565,7 @@ async function openPayslip(btn) {
     // Trigger calculation (includes API fetch)
     await recalc();
 
+    document.getElementById('ps-download-link').href = `/payroll/payslip/${_emp.id}/`;
     document.getElementById('payslipModal').classList.add('open');
 }
 
